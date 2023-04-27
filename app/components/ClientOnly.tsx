@@ -6,9 +6,9 @@ interface ClientOnlyProps {
   children: React.ReactNode;
 }
 
-const ClientOnly: React.FC<ClientOnlyProps> = ({
-  children
-}) => {
+const ClientOnly = (props: ClientOnlyProps) => {
+  const {children} = props
+
   const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {

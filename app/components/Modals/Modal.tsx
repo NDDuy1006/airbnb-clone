@@ -17,18 +17,20 @@ interface ModalProps {
   secondaryAction?: () => void;
 }
 
-const Modal: React.FC<ModalProps> = ({
-  isOpen,
-  title,
-  body,
-  footer,
-  actionLabel,
-  disabled,
-  secondaryActionLabel,
-  onSubmit,
-  onClose,
-  secondaryAction,
-}) => {
+const Modal = (props: ModalProps) => {
+  const {
+    isOpen,
+    title,
+    body,
+    footer,
+    actionLabel,
+    disabled,
+    secondaryActionLabel,
+    onSubmit,
+    onClose,
+    secondaryAction
+  } = props
+
   const [showModal, setShowModal] = useState(isOpen);
 
   useEffect(() => {

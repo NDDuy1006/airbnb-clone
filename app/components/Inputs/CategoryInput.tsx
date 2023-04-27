@@ -9,12 +9,14 @@ interface CategoryInputProps {
   onClick: (value: string) => void;
 }
 
-const CategoryInput: React.FC<CategoryInputProps> = ({
-  icon: Icon,
-  label,
-  selected,
-  onClick
-}) => {
+const CategoryInput = (props: CategoryInputProps) => {
+  const {
+    icon: Icon,
+    label,
+    selected,
+    onClick,
+  } = props;
+
   return (
     <div
       onClick={() => onClick(label)}
