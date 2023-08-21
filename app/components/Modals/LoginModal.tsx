@@ -55,7 +55,7 @@ const LoginModal = () => {
       if (callback?.ok) {
         toast.success("Logged in");
         router.refresh();
-        loginModal.onClose()
+        loginModal.onClose();
       }
 
       if (callback?.error) {
@@ -70,7 +70,7 @@ const LoginModal = () => {
   }, [loginModal, registerModal]);
 
   const bodyContent = (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 z-51">
       <Heading
         title="Welcome back"
         subtitle="Login to your account!"
@@ -142,7 +142,7 @@ const LoginModal = () => {
     <Modal
       disabled={isLoading}
       isOpen={loginModal.isOpen}
-      title="Continue"
+      title="Login"
       actionLabel="Continue"
       onClose={loginModal.onClose}
       onSubmit={handleSubmit(onSubmit)}

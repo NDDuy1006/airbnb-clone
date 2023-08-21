@@ -7,3 +7,29 @@ body,
 :root {
   height: 100%;
 }
+
+@layer components {
+  .modal-overlay {
+    @apply justify-center items-center flex overflow-x-hidden overflow-y-auto fixed inset-0 z-50 outline-none focus:outline-none bg-neutral-800/70
+  };
+
+  .modal-wrapper {
+    @apply relative w-full md:w-4/6 lg:w-3/6 xl:w-2/5 my-6 mx-auto h-full lg:h-auto md:h-auto
+  }
+
+  .modal-container {
+    @apply h-full lg:h-auto md:h-auto border-0 rounded-lg shadow-lg relative flex flex-col w-full bg-white outline-none focus:outline-none
+  }
+
+  .user-context-menu-button {
+    @apply p-4 md:py-1 md:px-2 border-[1px] border-neutral-200 flex flex-row items-center gap-3 rounded-full cursor-pointer hover:shadow-md transition
+  }
+
+  .user-context-menu-overlay {
+    @apply fixed inset-0 z-50 outline-none focus:outline-none bg-neutral-800/70 overflow-y-auto overflow-x-hidden flex
+  }
+
+  .user-context-menu {
+    @apply absolute rounded-xl shadow-md w-[40vw] md:w-[177px] bg-white overflow-hidden right-16 top-16 text-sm
+  }
+}
