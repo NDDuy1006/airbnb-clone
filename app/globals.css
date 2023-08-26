@@ -8,6 +8,13 @@ body,
   height: 100%;
 }
 
+.leaflet-bottom,
+.leaflet-control,
+.leaflet-pane,
+.leaflet-top {
+  z-index: 0 !important;
+}
+
 @layer components {
   .modal-overlay {
     @apply justify-center items-center flex overflow-x-hidden overflow-y-auto fixed inset-0 z-50 outline-none focus:outline-none bg-neutral-800/70
@@ -31,5 +38,41 @@ body,
 
   .user-context-menu {
     @apply absolute rounded-xl shadow-md w-[40vw] md:w-[177px] bg-white overflow-hidden right-16 top-16 text-sm
+  }
+
+  .category-button {
+    @apply hidden md:block text-sm font-semibold py-3 px-4 rounded-full hover:bg-neutral-100 transition cursor-pointer
+  }
+
+  .categories-wrapper {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto
+  }
+
+  .category-card {
+    @apply rounded-xl border-2 p-4 flex flex-col gap-3 hover:border-black transition cursor-pointer
+  }
+
+  .calc-button {
+    @apply w-10 h-10 rounded-full border-[1px] border-neutral-400 flex items-center justify-center text-neutral-600 cursor-pointer hover:opacity-80 transition
+  }
+
+  .image-upload-container {
+    @apply relative cursor-pointer hover:opacity-70 transition border-dashed border-2 p-20 border-neutral-300 flex flex-col justify-center items-center gap-4 text-neutral-600
+  }
+
+  .search-wrapper {
+    @apply border-[1px] w-full md:w-auto py-2 rounded-full shadow-sm hover:shadow-md transition cursor-pointer
+  }
+
+  .search-location {
+    @apply hidden sm:block text-sm font-semibold px-6 border-x-[1px] flex-1 text-center
+  }
+
+  .search-guest {
+    @apply text-sm pl-6 pr-2 text-gray-600 flex flex-row items-center gap-3
+  }
+
+  .card-list-wrapper {
+    @apply pt-24 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-6 gap-8
   }
 }

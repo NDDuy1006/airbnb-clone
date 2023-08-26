@@ -41,18 +41,7 @@ const UserMenu = (props: UserMenuProps) => {
       >
         <div
           onClick={onRent}
-          className="
-            hidden
-            md:block
-            text-sm
-            font-semibold
-            py-3
-            px-4
-            rounded-full
-            hover:bg-neutral-100
-            transition
-            cursor-pointer
-          "
+          className="category-button"
         >
           Airbnb your home
         </div>
