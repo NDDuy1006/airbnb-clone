@@ -10,14 +10,14 @@ interface IProps {
 };
 
 const HeartButton = ({ listingId, currentUser }: IProps) => {
-  const { hasFavourited, toggleFavoutite } = useFavourite({
+  const { hasFavourited, toggleFavourite } = useFavourite({
     listingId,
     currentUser
   });
 
   return (
     <div
-      onClick={toggleFavoutite}
+      onClick={toggleFavourite}
       className="relative hover:opacity-80 transition cursor-pointer"
     >
       <AiOutlineHeart

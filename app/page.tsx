@@ -21,7 +21,7 @@ export default async function Home() {
     <ClientOnly>
       <Container>
         <div className="card-list-wrapper">
-          {listing.map((item: any) => {
+          {listing.map((item) => {
             return (
               <ListingCard
                 currentUser={currentUser}

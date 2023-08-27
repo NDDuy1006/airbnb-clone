@@ -23,7 +23,7 @@ const useFavourite = ({
     return list.includes(listingId);
   }, [currentUser, listingId]);
 
-  const toggleFavoutite = useCallback(async (
+  const toggleFavourite = useCallback(async (
     e: React.MouseEvent<HTMLDivElement>
   ) => {
     e.stopPropagation();
@@ -38,7 +38,7 @@ const useFavourite = ({
       if (hasFavourited) {
         request = () => axios.delete(`/api/favourites/${listingId}`);
       } else {
-        request = () => axios.post(`/api/favoutites/${listingId}`)
+        request = () => axios.post(`/api/favourites/${listingId}`);
       }
 
       await request();
@@ -57,7 +57,7 @@ const useFavourite = ({
 
   return {
     hasFavourited,
-    toggleFavoutite
+    toggleFavourite
   }
 };
 
