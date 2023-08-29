@@ -79,7 +79,7 @@ const Modal = (props: ModalProps) => {
             showModal ? "translate-y-0" : "translate-y-full"
           )}
         >
-          <div className="modal-container">
+          <div className="modal-container h-[740px] md:h-full">
             {/* HEADER */}
             <div
               className="flex items-center p-6 rounded-t justify-center relative border-b-[1px]"
