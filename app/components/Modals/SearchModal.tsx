@@ -114,7 +114,7 @@ const SearchModal = ({ }: IProps) => {
   }, [step]);
 
   let bodyContent = (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-4">
       <Heading
         title="Where do you wanna go?"
         subtitle="Find your destination!"
@@ -123,14 +123,13 @@ const SearchModal = ({ }: IProps) => {
         value={location}
         onChange={(value => setLocation(value as CountrySelectValue))}
       />
-      <hr />
       <Map center={location?.latlng} />
     </div>
   );
 
   if (step === STEPS.DATE) {
     bodyContent = (
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-4">
         <Heading
           title="When do you plan to go?"
           subtitle="Make sure everyone is free!"
@@ -145,7 +144,7 @@ const SearchModal = ({ }: IProps) => {
 
   if (step === STEPS.INFO) {
     bodyContent = (
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-4">
         <Heading
           title="More infomation?"
           subtitle="Look for your perfect place!"

@@ -79,7 +79,7 @@ const Modal = (props: ModalProps) => {
             showModal ? "translate-y-0" : "translate-y-full"
           )}
         >
-          <div className="modal-container h-[730px] md:h-full">
+          <div className="modal-container h-[660px] md:h-full">
             {/* HEADER */}
             <div
               className="flex items-center p-6 rounded-t justify-center relative border-b-[1px]"
@@ -95,7 +95,7 @@ const Modal = (props: ModalProps) => {
               </div>
             </div>
             {/* BODY */}
-            <div className="relative p-4 flex-auto">
+            <div className="relative p-4">
               {body}
             </div>
             {/* FOOTER */}

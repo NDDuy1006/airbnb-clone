@@ -145,7 +145,7 @@ const RentModal = () => {
 
   if (step === STEPS.LOCATION) {
     bodyContent = (
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-4 md:gap-8">
         <Heading
           title="Where is your place located?"
           subtitle="Help guests find you!"
@@ -194,7 +194,7 @@ const RentModal = () => {
 
   if (step === STEPS.IMAGES) {
     bodyContent = (
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-12">
         <Heading
           title="Add a photo of your place"
           subtitle="Show guests what your place looks like!"

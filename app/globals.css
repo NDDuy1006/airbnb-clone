@@ -58,7 +58,7 @@ body,
   }
 
   .categories-wrapper {
-    @apply grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto
+    @apply grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 max-h-[39vh] md:max-h-[48vh] overflow-y-auto
   }
 
   .category-card {
