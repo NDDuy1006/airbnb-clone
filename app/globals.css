@@ -30,11 +30,15 @@ body,
   };
 
   .modal-wrapper {
-    @apply relative w-full md:w-4/6 lg:w-3/6 xl:w-2/5 my-6 mx-auto h-full lg:h-auto md:h-auto
+    @apply fixed md:relative w-full md:w-4/6 lg:w-3/6 xl:w-2/5 my-6 mx-auto h-full lg:h-auto md:h-auto
   }
 
   .modal-container {
     @apply h-full lg:h-auto md:h-auto border-0 rounded-lg shadow-lg relative flex flex-col w-full bg-white outline-none focus:outline-none
+  }
+
+  .modal-close-button {
+    @apply p-2 md:p-1 rounded-full md:rounded-none border-[1px] border-neutral-200 md:border-0 hover:opacity-70 transition absolute left-9
   }
 
   .user-context-menu-button {

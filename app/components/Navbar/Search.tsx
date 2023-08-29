@@ -54,7 +54,7 @@ const Search = () => {
       className="search-wrapper"
       onClick={searchModal.onOpen}
     >
-      <div className="flex flex-row items-center justif-between">
+      <div className="flex flex-row items-center justify-between">
         <div className="text-sm font-semibold px-6">
         {locationLabel}
         </div>
@@ -65,9 +65,7 @@ const Search = () => {
           <div className="hidden sm:block">
             {guestLabel}
           </div>
-          <div
-            className="p-2 bg-rose-500 rounded-full text-white"
-          >
+          <div className="p-2 bg-rose-500 rounded-full text-white">
             <BiSearch size={18} />
           </div>
         </div>
