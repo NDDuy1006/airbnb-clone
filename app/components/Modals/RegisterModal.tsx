@@ -64,7 +64,7 @@ const RegisterModal = () => {
   }, [loginModal, registerModal]);
 
   const bodyContent = (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2">
       <Heading
         title="Welcome to Airbnb"
         subtitle="Create an account"
@@ -99,8 +99,7 @@ const RegisterModal = () => {
   )
 
   const footerContent = (
-    <div className="flex flex-col gap-4 mt-2">
-      <hr />
+    <div className="flex flex-col gap-2">
       <Button
         outline
         label="Continue with Google"
