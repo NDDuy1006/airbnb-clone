@@ -79,7 +79,7 @@ const Modal = (props: ModalProps) => {
             showModal ? "translate-y-0" : "translate-y-full"
           )}
         >
-          <div className="modal-container h-[740px] md:h-full">
+          <div className="modal-container h-[730px] md:h-full">
             {/* HEADER */}
             <div
               className="flex items-center p-6 rounded-t justify-center relative border-b-[1px]"
@@ -99,7 +99,7 @@ const Modal = (props: ModalProps) => {
               {body}
             </div>
             {/* FOOTER */}
-            <div className="flex flex-col gap-2 p-6">
+            <div className="flex flex-col gap-2 px-6 py-4">
               <div className="flex flex-row items-center gap-4 w-full">
                 {secondaryAction && secondaryActionLabel && (
                   <Button
