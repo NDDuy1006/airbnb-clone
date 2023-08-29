@@ -36,6 +36,11 @@ const Modal = (props: ModalProps) => {
 
   useEffect(() => {
     setShowModal(isOpen);
+    if (isOpen) {
+      document.body.classList.add("overflow-y-hidden")
+    } else {
+      document.body.classList.remove("overflow-y-hidden")
+    }
   }, [isOpen]);
 
   const handleClose = useCallback(() => {
