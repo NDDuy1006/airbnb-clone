@@ -95,7 +95,7 @@ const Modal = (props: ModalProps) => {
               </div>
             </div>
             {/* BODY */}
-            <div className="relative p-6 flex-auto">
+            <div className="relative p-4 flex-auto">
               {body}
             </div>
             {/* FOOTER */}

@@ -26,7 +26,7 @@ const Home = async ({ searchParams }: HomeProps) => {
   return (
     <ClientOnly>
       <Container>
-        <div className="pt-24 card-list-wrapper">
+        <div className="pt-16 card-list-wrapper">
           {listing.map((item) => {
             return (
               <ListingCard
