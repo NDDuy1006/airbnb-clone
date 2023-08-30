@@ -37,7 +37,7 @@ const UserMenu = (props: UserMenuProps) => {
   
 
   return (
-    <div className="relative">
+    <div className="relative md:block">
       <div
         className="flex flex-row items-center gap-3"
       >

@@ -55,7 +55,7 @@ const Search = () => {
       onClick={searchModal.onOpen}
     >
       <div className="flex flex-row items-center justify-between">
-        <div className="text-sm font-semibold px-6">
+        <div className="text-sm font-semibold px-3 md:px-6">
         {locationLabel}
         </div>
         <div className="search-location">
@@ -69,7 +69,6 @@ const Search = () => {
             <BiSearch size={18} />
           </div>
         </div>
-
       </div>
     </div>
   )

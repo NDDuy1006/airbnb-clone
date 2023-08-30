@@ -3,6 +3,7 @@
 import Container from "../Container";
 import Categories from "./Categories";
 import Logo from "./Logo";
+import MobileSignInButtons from "./MobileSignInButton";
 import Search from "./Search";
 import UserMenu from "./UserMenu";
 import { SafeUser } from "@/app/types";
@@ -21,7 +22,11 @@ const Navbar = (props: NavbarProps) => {
           >
             <Logo />
             <Search />
-            <UserMenu currentUser={props.currentUser} />
+            {props.currentUser ? (
+              <UserMenu currentUser={props.currentUser} />  
+            ): (
+              <MobileSignInButtons />
+            )}
           </div>
         </Container>
       </div>

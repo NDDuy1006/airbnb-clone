@@ -42,7 +42,7 @@ body,
   }
 
   .user-context-menu-button {
-    @apply p-4 md:py-1 md:px-2 border-[1px] border-neutral-200 flex flex-row items-center gap-3 rounded-full cursor-pointer shadow-lg md:shadow-sm hover:shadow-md transition
+    @apply p-4 md:py-1 md:px-2 border-[1px] border-neutral-200 md:flex flex-row items-center gap-3 rounded-full cursor-pointer shadow-lg md:shadow-sm hover:shadow-md transition
   }
 
   .user-context-menu-overlay {
@@ -50,7 +50,7 @@ body,
   }
 
   .user-context-menu {
-    @apply absolute rounded-xl shadow-md w-[40vw] md:w-[177px] bg-white overflow-hidden right-16 top-16 text-sm
+    @apply absolute rounded-xl shadow-md w-[50vw] md:w-[177px] bg-white overflow-hidden right-0 md:right-16 top-16 text-sm
   }
 
   .category-button {
@@ -77,6 +77,10 @@ body,
     @apply border-[1px] w-full md:w-auto py-2 rounded-full shadow-lg hover:shadow-md md:shadow-sm transition cursor-pointer
   }
 
+  .mobile-signin-button {
+    @apply border-[1px] rounded-full shadow-lg hover:shadow-md md:shadow-sm transition text-sm cursor-pointer w-[84px] md:w-28 text-center py-3
+  }
+
   .search-location {
     @apply hidden sm:block text-sm font-semibold px-6 border-x-[1px] flex-1 text-center
   }
@@ -90,6 +94,6 @@ body,
   }
 
   .card-list-wrapper {
-    @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-6 gap-8
+    @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-8
   }
 }
