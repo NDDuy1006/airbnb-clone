@@ -14,7 +14,7 @@ const MenuItem = (props: MenuItemProps) => {
   return (
     <div
       onClick={onClick}
-      className="px-5 py-3 hover:bg-neutral-100 transition font-semibold text-center md:text-start"
+      className="px-5 py-3 hover:bg-neutral-100 transition font-semibold text-center md:text-start text-lg md:text-sm"
     >
       {label}
     </div>
