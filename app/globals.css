@@ -50,7 +50,11 @@ body,
   }
 
   .user-context-menu {
-    @apply absolute rounded-xl shadow-md w-[50vw] md:w-[177px] bg-white overflow-hidden right-0 md:right-16 top-16 text-sm
+    @apply absolute rounded-xl shadow-md w-full md:w-[205px] bg-white overflow-hidden right-0 md:right-10 top-[72px] md:top-16 text-sm py-2
+  }
+
+  .user-context-menu-mobile {
+    @apply absolute rounded-xl rounded-l-none shadow-md w-[50vw] md:w-[177px] bg-white overflow-hidden md:right-16 text-sm
   }
 
   .category-button {
@@ -78,7 +82,7 @@ body,
   }
 
   .mobile-signin-button {
-    @apply border-[1px] rounded-full shadow-lg hover:shadow-md md:shadow-sm transition text-sm cursor-pointer w-[84px] md:w-28 text-center py-3
+    @apply border-[1px] rounded-full shadow-lg hover:opacity-70 hover:shadow-md md:shadow-sm transition text-sm cursor-pointer w-[84px] md:w-28 text-center py-3
   }
 
   .search-location {

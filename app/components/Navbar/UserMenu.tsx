@@ -39,8 +39,7 @@ const UserMenu = (props: UserMenuProps) => {
   return (
     <div className="relative md:block">
       <div
-        className="flex flex-row items-center gap-3"
-      >
+        className="flex flex-row items-center gap-3">
         <div
           onClick={onRent}
           className="category-button"

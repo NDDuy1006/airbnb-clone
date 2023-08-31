@@ -108,7 +108,6 @@ const RegisterModal = () => {
           e.preventDefault();
           signIn("google")
         }}
-        disabled={true}
       />
       <Button
         outline
@@ -118,15 +117,9 @@ const RegisterModal = () => {
           e.preventDefault();
           signIn("github")
         }}
-        disabled={true}
       />
       <div
-        className="
-          text-neutral-500
-          text-center
-          mt-4
-          font-light
-        "
+        className="text-neutral-500 text-center mt-4 font-light"
       >
         <div className="justify-center flex flex-row items-center gap-2">
           <div>
