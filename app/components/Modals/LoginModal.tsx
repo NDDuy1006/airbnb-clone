@@ -104,16 +104,16 @@ const LoginModal = () => {
         label="Continue with Google"
         icon={FcGoogle}
         onClick={() => signIn("google")}
+        disabled={true}
       />
       <Button
         outline
         label="Continue with Github"
         icon={AiFillGithub}
         onClick={() => signIn("github")}
+        disabled={true}
       />
-      <div
-        className="text-neutral-500 text-center mt-4 font-light"
-      >
+      <div className="text-neutral-500 text-center mt-4 font-light">
         <div className="justify-center flex flex-row items-center gap-2">
           <div>
             First time using Airbnb?

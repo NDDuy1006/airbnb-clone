@@ -108,6 +108,7 @@ const RegisterModal = () => {
           e.preventDefault();
           signIn("google")
         }}
+        disabled={true}
       />
       <Button
         outline
@@ -117,6 +118,7 @@ const RegisterModal = () => {
           e.preventDefault();
           signIn("github")
         }}
+        disabled={true}
       />
       <div
         className="text-neutral-500 text-center mt-4 font-light"
