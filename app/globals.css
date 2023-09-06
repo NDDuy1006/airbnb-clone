@@ -26,7 +26,7 @@ body,
 
 @layer components {
   .modal-overlay {
-    @apply justify-center items-center flex h-[100vh] fixed inset-0 z-50 outline-none focus:outline-none bg-neutral-800/70
+    @apply justify-center items-center flex overflow-hidden fixed inset-0 z-50 outline-none focus:outline-none bg-neutral-800/70
   };
 
   .modal-wrapper {
