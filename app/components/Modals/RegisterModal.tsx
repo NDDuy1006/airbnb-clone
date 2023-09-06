@@ -114,10 +114,7 @@ const RegisterModal = () => {
         outline
         label="Continue with Github"
         icon={AiFillGithub}
-        onClick={(e) => {
-          e.preventDefault();
-          signIn("github")
-        }}
+        onClick={() => signIn("github")}
         disabled={true}
       />
       <div
