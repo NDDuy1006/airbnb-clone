@@ -100,4 +100,8 @@ body,
   .card-list-wrapper {
     @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-8
   }
+
+  .listing-item-heading-wrapper {
+    @apply hidden lg:flex lg:flex-col h-40 justify-end absolute w-full bottom-0 pb-4 px-4 bg-gradient-to-t from-black
+  }
 }

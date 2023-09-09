@@ -118,6 +118,7 @@ const ListingItemClient = (
           <div className="grid grid-cols-1 md:grid-cols-7 md:gap-10 mt-6">
             <ListingItemInfo
               user={listingItem.user}
+              title={listingItem.title}
               category={category}
               description={listingItem.description}
               guestCount={listingItem.guestCount}

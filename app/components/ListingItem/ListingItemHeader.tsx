@@ -26,11 +26,13 @@ const ListingItemHeader = ({
 
   return (
     <>
-      <Heading
-        title={title}
-        subtitle={`${location?.region}, ${location?.label}`}
-      />
-      <div className="w-full h-[60vh] overflow-hidden rounded-xl relative">
+      <div className="lg:hidden">
+        <Heading
+          title={title}
+          subtitle={`${location?.region}, ${location?.label}`}
+        />
+      </div>
+      <div className="w-full h-[60vh] lg:h-[85vh] overflow-hidden rounded-xl relative">
         <Image
           alt="image"
           src={imageSrc}
@@ -41,6 +43,13 @@ const ListingItemHeader = ({
           <HeartButton
             listingId={id}
             currentUser={currentUser}
+          />
+        </div>
+        <div className="listing-item-heading-wrapper">
+          <Heading
+            title={title}
+            subtitle={`${location?.region}, ${location?.label}`}
+            isListingItemTitle
           />
         </div>
       </div>

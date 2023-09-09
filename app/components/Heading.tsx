@@ -4,21 +4,25 @@ interface HeadingProps {
   title: string;
   subtitle?: string;
   center?: boolean;
+  isListingItemTitle?: boolean;
+  isListingItemInfo?: boolean
 }
 
 const Heading = (props: HeadingProps) => {
   const {
     title,
     subtitle,
-    center
+    center,
+    isListingItemTitle,
+    isListingItemInfo
   } = props
 
   return (
     <div className={center ? "text-center" : "text-start"}>
-      <div className="text-2xl font-bold">
+      <div className={`text-2xl font-bold ${isListingItemTitle && "text-white"} ${isListingItemInfo ? "text-xl" : "text-2xl"}`}>
         {title}
       </div>
-      <div className="font-light text-neutral-500 mt-2">
+      <div className={`font-light mt-2 ${isListingItemTitle ? "text-white" : "text-neutral-500"}`}>
         {subtitle}
       </div>
     </div>
