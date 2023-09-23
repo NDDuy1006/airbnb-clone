@@ -100,13 +100,13 @@ const RegisterModal = () => {
 
   const footerContent = (
     <div className="flex flex-col gap-2">
-      <Button
+      {/* <Button
         outline
         label="Continue with Google"
         icon={FcGoogle}
         onClick={(e) => {
           e.preventDefault();
-          signIn("google")
+          signIn("google", {callbackUrl: "http://localhost:3000"})
         }}
         disabled={true}
       />
@@ -116,7 +116,7 @@ const RegisterModal = () => {
         icon={AiFillGithub}
         onClick={() => signIn("github")}
         disabled={true}
-      />
+      /> */}
       <div
         className="text-neutral-500 text-center mt-4 font-light"
       >
@@ -126,11 +126,7 @@ const RegisterModal = () => {
           </div>
           <div
             onClick={toggle}
-            className="
-              text-neutral-800
-              cursor-pointer
-              hover:underline
-            "
+            className="text-neutral-800 cursor-pointer hover:underline"
           >
             Log in
           </div>

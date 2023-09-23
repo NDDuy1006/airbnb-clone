@@ -61,10 +61,16 @@ const ListingCard = ({
 
     const startDate = new Date(reservation.startDate);
     const endDate = new Date(reservation.endDate);
+    const currentDate = new Date();
 
-    return `${format(startDate, 'PP')} - ${format(endDate, 'PP')}`
-  }, [reservation])
+    const isReservationExpired = endDate < currentDate;
 
+    return {
+      formatDate: `${format(startDate, 'PP')} - ${format(endDate, 'PP')}`,
+      isReservationExpired
+    }
+  }, [reservation]);
+  
   return (
     <div
       onClick={() => router.push(`/listingDetail/${data.id}`)}  
@@ -90,7 +96,7 @@ const ListingCard = ({
           {location?.region}, {location?.label}
         </div>
         <div className="font-light text-neutral-500">
-          {reservationDate || data.category}
+          {reservationDate?.formatDate || data.category}
         </div>
         <div className="flex flex-row items-center gap-1">
           <div className="font-semibold">
@@ -104,7 +110,7 @@ const ListingCard = ({
         </div>
         {onAction && actionLabel && (
           <Button
-            disabled={disabled}
+            disabled={reservationDate?.isReservationExpired}
             small
             label={actionLabel}
             onClick={handleCancel}
