@@ -19,7 +19,7 @@ const Heading = (props: HeadingProps) => {
 
   return (
     <div className={center ? "text-center" : "text-start"}>
-      <div className={`text-2xl font-bold ${isListingItemTitle && "text-white"} ${isListingItemInfo ? "text-xl" : "text-2xl"}`}>
+      <div className={`text-2xl truncate font-bold ${isListingItemTitle && "text-white"} ${isListingItemInfo ? "text-xl" : "text-2xl"}`}>
         {title}
       </div>
       <div className={`font-light mt-2 ${isListingItemTitle ? "text-white" : "text-neutral-500"}`}>

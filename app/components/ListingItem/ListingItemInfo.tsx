@@ -65,7 +65,7 @@ const ListingItemInfo = ({
             </div>
           </div>
         </div>
-        <div className="hidden lg:block">
+        <div className="hidden lg:block max-w-[240px]">
           <Heading
             title={title}
             subtitle={`${location?.region}, ${location?.label}`}
