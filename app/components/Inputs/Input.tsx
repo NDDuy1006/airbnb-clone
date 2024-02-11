@@ -41,7 +41,11 @@ const Input = (props: InputProps) => {
         {...register(id, { required })}
         placeholder=" "
         type={type}
-        className={`peer w-full p-4 ${formatPrice ? "pl-9" : "pl-4"} pt-6 font-light bg-white border-2 rounded-md outline-none transition disabled:opacity-70 disabled:cursor-not-allowed ${errors[id] ? "border-rose-500 focus:border-rose-500" : "border-neutral-300 focus:border-black"}`}
+        className={twMerge(
+          "peer w-full p-4 pl-9 pt-6 font-light bg-white border-2 rounded-md outline-none transition disabled:opacity-70 disabled:cursor-not-allowed",
+          errors[id] ? "border-rose-500 focus:border-rose-500" : "border-neutral-300 focus:border-black",
+          formatPrice ? "pl-9" : "pl-4"
+        )}
       />
       <label
         className={twMerge(
