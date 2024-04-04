@@ -1,0 +1,2730 @@
+<script src="#appResource.stomp.js#"></script>
+<script>
+	// ---------- ChatBox ----------
+	let hashUser = '#currentUser.username#';
+	let hashDepartment = '#currentUser.department.id#'
+	let hashGroup = '#currentUser.groups.id#';
+	let hashSuppervisor = `#form.app_fd_omni_supervisor.username[#currentUser.groups.id#]#`;
+	let userviewURL = '/jw/web/userview/Omni/Omni/_/';
+	let mainUserViewURL = '/jw/web/userview/sp2/cc/_/';
+	let cur_domain = "#envVariable.Url_CRM#";
+
+	let arr_agent = [];
+	let arr_status_cov = [];
+	let arr_channel = [];
+	let idChatFocus = "";
+	let countLoad = 2;
+	let preJSON;
+	let preId;
+	let _tenKH;
+	let _fkKH;
+	let _ticketId;
+	let _tagId;
+	let _socialKey;
+	let _loadCustomer = false;
+	let _loadHistoryChat = false;
+	let _type;
+	let isNew = false;
+	let isSuggestTemplateLoaded = false;
+	let isCheckTicketClosedDone = false;
+	let isUILoaded = false;
+	let messageId;
+	let richInput;
+	let richInputHidden;
+	var socket_id_ticket = {};
+	var x_count = 1;
+	var id_message = null;
+	var clientCRMID = null;
+	let _fkAgent = null;
+	let id_last_message = '';
+	let hostxx = 'ws://' + location.host;
+	let is_uploadUI = false;
+	console.log('hostxx: ', hostxx);
+	// let hostxx = 'ws://'+'10.0.65.186:8085';
+	let messageGroups = [];
+	let currentGroup = [];
+	let conversationCountValue = 0;
+
+	let messageStatus = {
+		sending: {
+			color: 'var(--deals-color)',
+			content: 'Đang gửi'
+		},
+		success: {
+			color: 'var(--chat-send-success)',
+			content: 'Đã gửi'
+		},
+		fail: {
+			color: 'var(--red)',
+			content: 'Gửi không thành công'
+		},
+		approved: {
+			color: 'var(--tasks-color)',
+			content: 'Đã duyệt'
+		},
+		approval: {
+			color: 'var(--deals-color)',
+			content: 'Đang duyệt'
+		},
+		reject: {
+			color: 'var(--red)',
+			content: 'Không được duyệt'
+		}
+	};
+	let xFileUpload = ''
+	let xImgUpload = ''
+
+	$(document).ready(() => {
+		chat_getSubject(1, 100);
+		// Bắt sự kiện khi lăn chuột tới cuối danh sách
+		// $('#leftBoxContent').on('scroll', handleScroll)
+		connSocket();
+
+		// Bắt sự kiện chuyển lại tab livechat
+		returnLiveChatPage();
+
+
+	})
+
+	// ---- Handle Unread -----
+	function handleUnread(e) {
+		$(e).on('click', changeToRead(e))
+	}
+
+	// ---- Change To Read ----
+	function changeToRead(e) {
+		$(e.target).closest('.msg-item').unbind('click', handleUnread).removeClass('unread');
+		if ($(e.target).closest('.msg-item').find('#convItem .count-unread').length > 0) {
+			$(e.target).closest('.msg-item').find('#convItem .count-unread').remove();
+		}
+	}
+
+	// ----- Handle Scroll -----
+	function handleScroll() {
+		let currentScrollHeight = $('#leftBoxContent').scrollTop() + $('#leftBoxContent').height() + 16
+		let leftBoxHeight = $('#leftBoxContent').prop('scrollHeight')
+
+		if (currentScrollHeight == leftBoxHeight) {
+			chat_getSubject(countLoad, 10);
+			countLoad++;
+			handleClickConversation('.msg-item');
+			handleUnread('.msg-item.unread');
+		}
+	}
+
+	// ----- Handle Click Conversation -----
+	function handleClickConversation(e) {
+
+		$(e).off('click', clickConv)
+		// Remove Send Event
+		$("#chatSendBtn").off('click', sendMsg)
+		$(document).off('keydown', eventEnter)
+		$(document).on('keydown', eventEnter)
+		$(e).on('click', clickConv)
+	}
+
+	function clickConv(e) {
+		// Clear socket
+		if (clientCRMID)
+			clientCRMID.disconnect(() => {
+				console.log('bye');
+			});
+
+		// Remove unread
+		changeToRead(e);
+
+		// Clear text
+		$('.ql-editor').text('');
+
+		// Remove class focus
+		$('.msg-item').each((i, e) => {
+			$(e).not($(e.target).closest('.msg-item')).removeClass('focus');
+		})
+
+		// Add class focus
+		$(e.target).closest('.msg-item').addClass('focus');
+
+		// input value into variable
+		isNew = false;
+		messageId = $(e.target).closest('.msg-item').attr('data-messageId');
+		_type = $(e.target).closest('.msg-item').attr('data-type');
+		_fkAgent = $(e.target).closest('.msg-item').find('#agent').attr('fk-agent');
+		_tenKH = $(e.target).closest('.msg-item').find('.conv-item__name').attr('data-agent');
+		idChatFocus = $(e.target).closest('.msg-item').attr('id');
+		_ticketId = $(e.target).closest('.msg-item').attr('id');
+		_fkKH = $(e.target).closest('.msg-item').attr('data-fkKH');
+		_tagId = $(e.target).closest('.msg-item').attr('data-tagId');
+		_socialKey = $(e.target).closest('.msg-item').attr('data-socialKey');
+		_source = $(e.target).closest('.msg-item').attr('data-source');
+		connSocketIDTicket(_ticketId);
+		var msgCountLoad = 2;
+		let _element = e
+
+		// Remove box info
+		if (_loadCustomer == true || _loadHistoryChat == true) {
+			$('#chatSection .form-column:eq(1)').animate({ width: '58%' })
+			$('#chatSection .form-column:eq(2)').animate({ width: '22%' }, 250)
+			$('#chatSection .form-column:eq(2)').css('display', 'flex')
+			$('#chatSection .form-column:eq(2) .form-cell').css('width', '90%')
+
+			_loadCustomer = false
+			_loadHistoryChat = false
+		}
+
+		// prepend panel to chatSection
+		if ($('.middle-pane-filter').length === 0) {
+			$('#chatSection .form-column:eq(1)').prepend(`
+            <div class="middle-pane-filter">
+                <div class="pane-filter__item">
+                    <i class="fa fa-newspaper"></i>
+                    <span>Any topic</span>
+                    <i class="fa fa fa-angle-down"></i>
+                </div>
+                <div class="pane-filter__item">
+                    <span>Any status</span>
+                    <i class="fa fa fa-angle-down"></i>
+                </div>
+            </div>
+        `)
+		}
+
+		// append sidenav to userInfoSection
+		if ($('.vertical-tabs').length === 0) {
+			$('#chatSection .form-column:eq(2)').append(`
+            <div class="vertical-tabs">
+                <div class="collapse-expand__wrapper">
+                    <span class="vertical-tabs__collapse">
+                        <i class="fa fa-chevron-right" style="font-size: 10px"></i>
+                        <i class="fa fa-ellipsis-v"></i>
+                    </span>
+                </div>
+                <span class="vertical-tabs__item" id="underDevelopment6">
+                    <i class="fa fa-user"></i>
+                </span>
+                <span class="vertical-tabs__item" id="underDevelopment7">
+                    <i class="fa fa-cog"></i>
+                </span>
+                <span class="vertical-tabs__item" id="underDevelopment8">
+                    <i class="fa fa-calendar"></i>
+                </span>
+                <span class="vertical-tabs__item" id="underDevelopment9">
+                    <i class="fa fa-sliders"></i>
+                </span>
+                <hr class="tabs-separator">
+                <span class="vertical-tabs__item" id="underDevelopment10">
+                    <i class="fa fa-plus-square"></i>
+                </span>
+            </div>
+        `)
+		}
+
+		// Clear input chatbox
+		clearInputChatBox();
+
+		$('#adminControl', window.parent.document).animate({
+			'left': '10px',
+			'bottom': '3px'
+		})
+
+		// Remove & Renew Box chat
+		$('#rightBoxContent').empty()
+		createBoxChat(_ticketId, _fkKH)
+		endScrollTop()
+
+		// ----- Handle Msg -----
+		handleMsg(_ticketId, '', 5, 1)
+
+		// ----- More Msg -----
+		$('#x-more-div').click(moreMsg)
+
+		function moreMsg() {
+			let _dataDate = '';
+			$('.send-time').each((i, e) => {
+				if ($(e).attr('data-date') == 'true') {
+					_dataDate = $(e).text()
+					handleMsg(_ticketId, _dataDate, 5, msgCountLoad);
+					msgCountLoad++;
+				}
+			})
+			// handleMsg(_ticketId, _dataDate)
+		}
+
+		// ----- Handle Convert Ticket -----
+		$('#convertTicketBtn').on('click', handleConvertTicket)
+
+		// ----- Handle Make Call -----
+		$('#makeCall').on('click', handleMakeCall)
+		// ----- Handle Send Email -----
+		$('#sendEmailBtn').on('click', handleSendEmail)
+		// ----- Handle Reset -----
+		$('#resetBtn').on('click', resetBoxChat)
+
+		function resetBoxChat() {
+			// if(idChatFocus) $(`.msg-item#${idChatFocus}`).click();
+			// richInput.html('')
+			// richInput.html('')
+
+			richInput.val('');
+
+			$('article .message-view').css("filter", "blur(4px)")
+			$('.right-box__overlay').css("filter", "blur(4px)")
+
+			// setTimeout dung de doi element load xong
+			setTimeout(() => {
+				$('.right-box__overlay').css("filter", "none")
+				msgCountLoad = 2
+				$('#resetBtn').off('click', resetBoxChat)
+				$("#chatSendBtn").off('click', sendMsg)
+				// Remove & Renew Box chat
+				clearInputChatBox();
+
+				$('#x-more-div').off('click', moreMsg)
+
+				preJSON = {}
+
+				$('#rightBoxContent').empty()
+
+				createBoxChat(_ticketId, _fkKH)
+				endScrollTop()
+				$('#x-more-div').on('click', moreMsg)
+
+				$('div[id^="richInput"][id$="editor_container"]').addClass('rich-input').prependTo('.chat-input__content')
+				$('textarea[name="richInput"]').prependTo('.chat-input__content')
+
+				// ----- Handle Msg -----
+				handleMsg(_ticketId, '', 5, 1)
+
+				// Change Header & Background
+				handleHeaderAndBackground(_element)
+
+				$('#resetBtn').on('click', resetBoxChat)
+
+				$("#chatSendBtn").on('click', sendMsg)
+
+				// ----- Handle Clear -----
+				$('#chatClearBtn').on('click', () => {
+					// richInput.html('')
+					richInput.val('');
+				})
+
+				// ----- Load Customer -----
+				$('#infoBtn').on('click', loadCustomer)
+
+				// ----- Load History Chat -----
+				$('#historyChatBtn').on('click', loadHistoryChat)
+
+				// ----Template-----
+				handleTemplate();
+
+				// ----New chat-----
+				handleNewChat(messageId)
+
+				// ----- Handle Convert Ticket -----
+				$('#convertTicketBtn').on('click', handleConvertTicket);
+
+				$('#makeCall').on('click', handleMakeCall)
+				// ----- Handle Send Email -----
+				$('#sendEmailBtn').on('click', handleSendEmail)
+
+				checkTicketClosed(_ticketId);
+				// handleNote();
+				handleSuggestTemplate();
+				handleTag();
+			}, 500)
+
+		}
+
+		// Move TextArea Element To Box Chat
+		$('div[id^="richInput"][id$="editor_container"]').addClass('rich-input').prependTo('.chat-input__content')
+		$('textarea[name="richInput"]').prependTo('.chat-input__content')
+
+		handleTemplate();
+
+		// ----New chat-----
+		handleNewChat(messageId)
+
+		//<div contenteditable="true" id="richInput" class="rich-input empty" tabindex="1" autocorrect="off" autocomplete="none" spellcheck="false" placeholder="Aa"><div id="input_line"><br></div></div>
+
+		let tagClassName = $('header #tagType').attr('class')
+
+		// Remove hight light
+		$('.conv-item').removeClass('active')
+
+		// Hight light clicked item
+		$(e.target).closest('.msg-item').find('.conv-item').addClass('active')
+
+		// Change Header & Background
+		handleHeaderAndBackground(e)
+
+		// ----- Handle Input & Focus -----
+		// richInput = $('div[id^="richInput"][id$="editor_container"]').find('div.ql-editor.ql-blank[contenteditable="true"]')
+		richInput = $('#richInput')
+		richInputHidden = $('textarea[name="richInput"]')
+
+		richInput.on('focus', (e) => {
+			$('.chat-input__content').addClass('focus')
+			$('#adminControl', window.parent.document).animate({
+				'left': '10px',
+				'bottom': '3px'
+			})
+			$('.message-view__scroll').scrollTop(99999999)
+		})
+
+		richInput.on('focusout', () => {
+			$('.chat-input__content').removeClass('focus')
+		})
+
+		// ----- Handle Clear -----
+		$('#chatClearBtn').on('click', () => {
+			// richInput.html('')
+			richInput.val('');
+		})
+
+		// ----- Handle Send -----
+		$("#chatSendBtn").on('click', sendMsg)
+
+		if (preId == _ticketId) {
+			$('#resetBtn').trigger('click');
+		} else {
+			checkTicketClosed(_ticketId)
+		}
+
+		// This line prevent for spam API
+		preId = _ticketId;
+
+		// Load Info Customer
+		$('#infoBtn').on('click', loadCustomer)
+		$('#historyChatBtn').on('click', loadHistoryChat)
+		// richInput.html('')
+		richInput.val('');
+		// Focus to input
+		richInput.focus();
+		$('#historyChatBtn').trigger('click');
+		// handleNote();
+		handleSuggestTemplate();
+		handleTag();
+	}
+	// ----- End Handle Click Conversation -----
+
+	// ----- Recieve new socket message when focus -----
+	// setInterval(()=>{
+	//   let _msgReceive =  top.sendSocketMsg()
+	//   if(_msgReceive != '') {
+	//         let _countMsg = 1;
+	//         let _xobj = JSON.parse(_msgReceive);
+	//         $('.msg-item').not('.focus').each((i, e)=>{
+	//           if($(e).attr('id') == _xobj.ticket) {
+
+	//               if($(e).find('#convItem .count-unread').text() != '') {
+	//                   _countMsg = parseInt($(e).find('#convItem .count-unread').text()) + 1
+	//                   $(e).find('#convItem .count-unread').remove()
+	//                   if(_countMsg > 9) _countMsg = '+9'
+	//               }
+	//               $(e).addClass('unread');
+	//               $(e).find('#convItem').append(`<span class="count-unread">${_countMsg}</span>`);
+	//           }
+	//       })
+	//     }
+	// }, 1)
+
+	// ----- Handle Enter -----
+	function eventEnter(e) {
+		if (e.key == 'Enter') {
+			e.preventDefault();
+			$('#chatSendBtn').trigger('click')
+		}
+	}
+
+	// ----- Scroll View to first news -----
+	function endScrollTop() {
+		$('.message-view__scroll').animate({ scrollTop: 99999999 })
+	}
+
+	// ----- Handle Template -----
+	function handleTemplate() {
+		$('#toolTemplate').click(triggerTemplate)
+		function triggerTemplate() {
+			$('button.selector_button').trigger('click')
+
+			$("select[name$='template']").on("change", function () {
+				let t3 = $(this).val();
+				const templateItem = t3;
+				// let content = $(".ql-editor");
+				// content.html(templateItem);
+				richInput.val(templateItem);
+				richInput.focus();
+			})
+		}
+	}
+
+	function sendMsg() {
+
+		// $('.chat-item.me:last-child').find('#sendStatus').empty()
+		// let msg = richInputHidden.text().trim();
+		let msg = richInput.val().trim();
+		if (msg == '<p><br></p>' || !msg) return
+		// if(richInput.text().trim() != '' && msg != '<p><br></p><p><br></p>'||richInput.find('p img').length > 0)
+		if (msg) {
+			// createChat(content, dateCreated, name, type, date, status, in_idTicket)
+			createChat(msg, new Date().toTimeString().slice(0, 8), `${hashUser}`, 'manual', '', messageStatus.success.content, 'lastest')
+			$('.chat-item.me:last-child').find('#sendStatus i').attr('class', 'sap sap-message-sending')
+			let out_json = {
+				"source": `${_type}`,
+				"inReplyTo": `${messageId}`,
+				"in_fk": `${_ticketId}`,
+				"content": msg,
+				"status": messageStatus.success.content,
+				"agent_ticket": _fkAgent,
+				"content_type": "text",
+				"mediaUrl": "",
+				"mediaType": "",
+				"mediaSize": "",
+				"altText": "",
+				"comment": ""
+			};
+			if (isNew) {
+				out_json = {
+					"source": `${_type}`,
+					"inReplyTo": `${messageId}`,
+					"in_fk": ``,
+					"content": msg,
+					"status": messageStatus.success.content,
+					"agent_ticket": _fkAgent,
+					"content_type": "text",
+					"mediaUrl": "",
+					"mediaType": "",
+					"mediaSize": "",
+					"altText": "",
+					"comment": ""
+				};
+			}
+			x_send(out_json);
+			//runReviewMessage(_type,messageId,_ticketId,msg);
+			// richInput.html('')
+			richInput.val('');
+		}
+		// richInput.html('')
+		richInput.val('');
+		endScrollTop();
+	}
+
+	function x_send(in_json) {
+		try {
+
+			var settings = {
+				"url": "/jw/api/process/sendOmniMessage/startProcessByUser/" + hashUser,
+				"method": "POST",
+				"timeout": 0,
+				"headers": {
+					"api_key": "#envVariable.api_key_2#",
+					"api_id": "#envVariable.api_id_2#",
+					"Content-Type": "application/json"
+				},
+				"data": JSON.stringify(in_json),
+			};
+
+			$.ajax(settings).done(function (response) {
+				console.log(response);
+				$('.chat-item.me:last-child').find('#sendStatus i').attr('class', 'fa fa-check');
+
+				moveTopNewMessage('.msg-item.focus', "#date.yyyy-MM-dd HH:mm:ss#");
+				// $('.chat-item.me#lastest').attr('id',response.recordId).find('#sendStatus').attr('style','color:var(--tasks-color)').html('<i class="fa fa-check"></i>');
+
+				// moveTopNewMessage('.msg-item.focus', "#date.yyyy-MM-dd HH:mm:ss#");
+				if (isNew) {
+					showMessage('Đang tạo hội thoại mới...');
+					let param = `subject=${encodeURIComponent(_tenKH)}&syncId=${encodeURIComponent(messageId)}&agent=${encodeURIComponent(hashUser)}&fkContact=${encodeURIComponent(_fkKH)}&source=${encodeURIComponent(_source)}&idMessage=${encodeURIComponent(response.recordId)}&in_type=${encodeURIComponent(_type)}`;
+					var settings = {
+						"url": `/jw/api/form/omni_api_newchat/a?${param}`,
+						"method": "GET",
+						"timeout": 0,
+						"headers": {
+							'api_id': '#envVariable.api_id_2#',
+							'api_key': '#envVariable.api_key_2#',
+							'Accept': 'application/json',
+							'Content-Type': 'application/json'
+						},
+						"isAsync": false
+					};
+
+					$.ajax(settings).done(function (response) {
+						response = JSON.parse(response.rs);
+						response = response[0];
+						idChatFocus = response.id
+						chat_getSubject(1, 100);
+					});
+				}
+				/*
+				var settings = {
+				  "url": "/jw/api/process/sys_reply/startProcess",
+				  "method": "POST",
+				  "timeout": 0,
+				  "headers": {
+				  "api_key": "#envVariable.api_key#",
+				  "api_id": "#envVariable.api_id#",
+				  "Content-Type": "application/json"
+				  },
+				  "data": JSON.stringify(in_json),
+				};
+				  
+				$.ajax(settings).done(function (response) {
+				  console.log(response);
+				  
+				//   Change status send success
+				  $('.chat-item.me:last-child').find('#sendStatus i').attr('class','fa fa-check');
+				  
+				  moveTopNewMessage('.msg-item.focus', "#date.yyyy-MM-dd HH:mm:ss#");
+				});
+				*/
+			});
+
+		} catch (e) { }
+	}
+
+	// ----- Load History Chat -----
+	function loadHistoryChat() {
+		if (_loadHistoryChat == false) {
+			$('#iframe_info').ready(() => {
+				let iframeHeight = $('#iframe_info').parents('.form-column').height();
+				$('#iframe_info').height(iframeHeight);
+				_loadHistoryChat = true;
+				$('#chatSection .form-column:eq(1)').css({ width: '58%' })
+				$('#chatSection .form-column:eq(2)').css({ display: 'flex' })
+				$('#chatSection .form-column:eq(2) form-cell').css('width', '100%')
+
+				$('#chatSection .form-column:eq(2)').css('border', 'none')
+				$('#chatSection .form-column:eq(2)').css('background', 'transparent')
+				$('#chatSection .form-column:eq(2)').css('padding', '0 0 0 12px !important')
+				$('#chatSection .form-column:eq(2) .form-cell').css('width', '90%')
+
+				$('#chatSection .form-column:eq(2)').css({ width: '22%', borderLeft: '1px solid #d6dbe1' }).prop('style').setProperty('padding-left', '12px', 'important');
+				let _fkKH = $("#infoBtn").attr('data-fkKH');
+				let _url = `${userviewURL}form_live_chat_history?embed=true&fkTicket=${_ticketId}&fkKH=${_fkKH}`;
+				$("iframe#iframe_info").attr("src", _url);
+				// $('#customer_detail .viewForm-body-content').css('filter','none')
+			})
+		} else {
+			_loadHistoryChat = false;
+			$('#chatSection .form-column:eq(1)').css({ width: '75%' })
+			$('#chatSection .form-column:eq(2)').css('display', 'none')
+			$('#chatSection .form-column:eq(2)').css({ width: '0%' })
+		}
+	}
+
+	// ----- Load Customer -----
+	function loadCustomer() {
+		if (_loadCustomer == false) {
+			$('#iframe_info').ready(() => {
+				let iframeHeight = $('#iframe_info').parents('.form-column').height();
+				$('#iframe_info').height(iframeHeight);
+				_loadCustomer = true;
+				$('#chatSection .form-column:eq(1)').animate({ width: '58%' })
+				$('#chatSection .form-column:eq(2)').css('display', 'flex')
+				$('#chatSection .form-column:eq(2)').animate({ width: '22%' })
+				let _fkKH = $("#infoBtn").attr('data-fkKH');
+				let _url = `${userviewURL}customer_detail?embed=true&id=${_fkKH}`;
+				$("iframe#iframe_info").attr("src", _url);
+				$('#customer_detail .viewForm-body-content').css('filter', 'none')
+			})
+		} else {
+			_loadCustomer = false;
+			$('#chatSection .form-column:eq(1)').animate({ width: '75%' })
+			$('#chatSection .form-column:eq(2)').css('display', 'none')
+			$('#chatSection .form-column:eq(2)').animate({ width: '0%' })
+		}
+	}
+
+	function savePhone(so = '', change = 'no') {
+		var fkKH = $('#infoBtn').attr('data-fkkh');
+		var data;
+		$.ajax({
+			url: `/jw/api/form/thongTinKH_liveChat/get?id=${fkKH}&phone=${so}&update=${change}`,
+			dataType: 'json',
+			async: false,
+			headers: {
+				'api_id': '#envVariable.api_id_2#',
+				'api_key': '#envVariable.api_key_2#',
+				'accept': 'application/json'
+			},
+			type: 'GET',
+			success: function (obj) {
+				if (obj != null) {
+					//var data = JSON.parse(obj.rs)
+					data = obj;
+
+				}
+
+			}
+		});
+		return data;
+	}
+
+	function getCif(id) {
+		var fkKH = $('#infoBtn').attr('data-fkkh');
+		var cif;
+		$.ajax({
+			url: `/jw/api/form/api_contact/${id}`,
+			dataType: 'json',
+			async: false,
+			headers: {
+				'api_id': '#envVariable.api_id_2#',
+				'api_key': '#envVariable.api_key_2#',
+				'accept': 'application/json'
+			},
+			type: 'GET',
+			success: function (obj) {
+				if (obj != null) {
+					//var data = JSON.parse(obj.rs)
+					cif = obj.cif;
+				}
+			}
+		});
+		return cif;
+	}
+	function getPhoneByCif(id) {
+		var phone;
+		$.ajax({
+			url: `/jw/api/form/sp_khachhang_cif/${id}`,
+			dataType: 'json',
+			async: false,
+			headers: {
+				'api_id': '#envVariable.api_id_2#',
+				'api_key': '#envVariable.api_key_2#',
+				'accept': 'application/json'
+			},
+			type: 'GET',
+			success: function (obj) {
+				if (obj != null) {
+					console.log(obj);
+					phone = obj.Phone;
+				}
+			}
+		});
+		return phone;
+	}
+	function saveNumberInLiveChat(so) {
+
+		var result = savePhone();
+		var data = JSON.parse(result.rs);
+		if (data[0].phone == '') {
+			var question = confirm(`Lưu số: '${so}' vào thông tin khách hàng?`);
+			if (question == true) {
+				savePhone(so, 'update');
+				alert('Lưu thành công!');
+			}
+		}
+		if (data[0].phone !== '') {
+			if (data[0].phone == so) {
+				alert(`Số điện này '${so}' đã được lưu trong thông tin khách hàng rồi!`);
+			}
+			else {
+				var question = confirm(`'${data[0].phone}' Bạn có muốn thay đổi số điện thoại của khách hàng thành '${so}' không?`);
+				if (question == true) {
+					savePhone(so, 'update');
+					alert('Thay đổi thành công!');
+				}
+			}
+
+		}
+	}
+
+	// ----- Create Chat -----
+	function createChat(content, dateCreated, name, type, date, status, in_idTicket, avatar, content_type, media, comment, attachments) {
+		let _status = '';
+		let _color = '';
+		let fileType = '';
+		let fileName = '';
+		id_last_message = in_idTicket;
+
+		switch (status) {
+			// Đang duyệt
+			case messageStatus.approval.content:
+				_color = messageStatus.approval.color;
+				_status = `<i class="sap fa fa-check"></i>`;
+				break;
+			// Không được duyệt
+			case messageStatus.reject.content:
+				_color = messageStatus.reject.color;
+				_status = `<i class="fa fa-times" style="font-size: 10px"></i>`;
+				break;
+			// Gửi thất bại
+			case messageStatus.fail.content:
+				_color = messageStatus.fail.color;
+				_status = `<i class="fa fa-times" style="font-size: 10px"></i>`;
+				break;
+			// Gửi thành công
+			case messageStatus.success.content:
+				_color = messageStatus.success.color;
+				_status = `<i class="fa fa-check" style="font-size: 10px"></i>`
+
+		}
+		let timeFormat = dateCreated.split('.')[0]
+		let timeMessageSent = timeFormat.split(" ")[1]
+
+		var textContent = decodeHtmlEntities(content);
+		var stt = 1;
+		var start = 0;
+		var end = 0;
+		var arr_so = [];
+		var dauSo = ['090', '093', '089', '091', '094', '088', '098', '097', '096', '086', '092', '056', '058', '099', '059'];
+		for (var i = 0; i < textContent.length; i++) {
+			if ('<p><img src' === textContent.slice(0, 11)) {
+
+				break;
+			}
+			if (!isNaN(textContent[i] && textContent[i] != " ")) {
+				if (start == 0) {
+					start = i;
+				}
+				if (end != 0 && start != 0) {
+					if (textContent.slice(start, end) != "" && end - start > 6 && (textContent.slice(start - 1, end).trim()[0] === "0" || textContent.slice(start - 1, end).trim().slice(0, 2) === "84")) {
+						arr_so.push(textContent.slice(start - 1, end).trim());
+					}
+
+					start = 0;
+					end = 0;
+				}
+			}
+			if (isNaN(textContent[i]) && textContent[i] != " ") {
+				end = i;
+			}
+
+		}
+
+		if (type.toLowerCase().trim() === 'rsync' || type.toLowerCase().trim() === 'zalo') {
+			arr_so.forEach(function (so) {
+				var so_ = so.replace(/ /g, "");
+				if (so_.length > 7 && so_.length < 12) {
+					var line = `<a class="numberLiveChat" style="cursor: pointer;text-decoration: underline;" onclick='saveNumberInLiveChat("${so_}")' id = 'numberLiveChat2_${stt}'>` + so_ + '</a>';
+					textContent = textContent.replace(so, line);
+					stt++;
+				}
+			});
+
+		}
+		else if (type.toLowerCase().trim() !== 'rsync') {
+			arr_so.forEach(function (so) {
+				var so_ = so.replace(/ /g, "");
+				if (so_.length > 7 && so_.length < 12) {
+					var line = `<a class="numberLiveChat" style="cursor: pointer;text-decoration: underline; color:currentcolor;" onclick='saveNumberInLiveChat("${so_}")' id = 'numberLiveChat1_${stt}'>` + so_ + '</a>';
+					textContent = textContent.replace(so, line);
+					stt++;
+				}
+
+			});
+		}
+
+		content = textContent;
+		// <a style="cursor:zoom-in" href="${attachments.url}" target="_blank"><img src="${attachments.url}" alt="${attachments.thumbnail}" style="width: 100%; max-width: 200px;"/></a>
+		switch (content_type) {
+			case 'text':
+				if (attachments.type == "file") {
+					if (attachments.url) {
+						fileType = checkFileType(attachments.thumbnail);
+						fileName = handleFileName(attachments.thumbnail);
+
+						content = `
+							<span class="file_attachment">
+								<i class="fa fa-paperclip"></i>
+								<span style="color: #576c7d; display: flex; flex-direction: column">
+									<span>
+										<span style="display: inline-block;
+											max-width: 70px;
+											overflow: hidden;
+											-webkit-line-clamp: 1;
+											-webkit-box-orient: vertical;
+											vertical-align: bottom;
+											white-space: nowrap;
+											text-overflow: ellipsis;
+											word-break: break-word;">${fileName.firstName}</span>
+										<span>${fileName.lastName}.${fileName.extensionFile}</span>
+									</span>
+									<span>165.6 KB | <a href=${mediaUrl} target="_blank"> Download</a></span>
+								</span>
+							</span>
+						`
+					} else {
+						content = "Lỗi tải tệp đính kèm !"
+					}
+				} else if (attachments.type == "image" || attachments.type == "gif") {
+					if (attachments.url) {
+						content = `<span style="display: flex; flex-direction: column">
+                            <a style="cursor:zoom-in" onclick="top.click2Popup('popupLiveChat?embed=true&imgURL=/FileZendesk/${attachments.url}')"><img src="/FileZendesk/${attachments.url}" alt="${attachments.thumbnail}" style="width: 100%; max-width: 200px;"/></a>
+                            <span style="margin-top:8px">${content}</span>
+                        </span>`
+					} else {
+						content = "Lỗi tải hình ảnh !"
+					}
+				} else if (attachments.type == "sticker") {
+					if (attachments.url) {
+						content = `<a style="cursor:zoom-in" onclick="top.click2Popup('popupLiveChat?embed=true&imgURL=/FileZendesk/${attachments.url}')"><img src="/FileZendesk/${attachments.url}" alt="${attachments.thumbnail}" style="width: 100%; max-width: 200px;"/></a>`
+					} else {
+						content = "Lỗi tải sticker !"
+					}
+				}
+
+				break;
+			case 'image':
+				content = `<a style="cursor:zoom-in" onclick="top.click2Popup('popupLiveChat?embed=true&imgURL=${media.mediaUrl}')"><img src="${media.mediaUrl}" alt="${media.altText}" style="width: 100%; max-width: 200px;"/></a>`
+				break;
+			case 'file':
+				if (content.includes(';')) {
+					let fileArr = content.split(';');
+					content = "";
+
+					fileArr.map((e) => {
+						fileType = checkFileType(e);
+						fileName = handleFileName(e);
+						mediaUrl = media.mediaUrl + "/" + e;
+
+						content += `<span class="file_attachment">
+                                        <i class="fa fa-paperclip"></i>
+                                        <span style="color: #576c7d; display: flex; flex-direction: column">
+                                            <span>
+                                                <span style="
+                                                    display: inline-block;
+                                                    max-width: 93px;
+                                                    overflow: hidden;
+                                                    -webkit-line-clamp: 1;
+                                                    -webkit-box-orient: vertical;
+                                                    vertical-align: bottom;
+                                                    white-space: nowrap;
+                                                    text-overflow: ellipsis;
+                                                    word-break: break-word;"
+                                                >
+                                                        ${fileName.firstName}
+                                                </span>
+                                                <span>${fileName.lastName}.${fileName.extensionFile}</span>
+                                            </span>
+                                            <span>165.6 KB | <a href=${mediaUrl} target="_blank"> Download</a></span>
+                                        </span>
+                                    </span>`
+					});
+				} else {
+					if (type == "send") {
+						fileType = checkFileType(content);
+						fileName = handleFileName(content);
+						media.mediaUrl += "/" + content;
+					} else if (type == "upload") {
+						var contentArr = content.split("/");
+						content = contentArr[contentArr.length - 1]
+						fileType = checkFileType(content);
+						fileName = handleFileName(content);
+						media.mediaUrl += "/" + content;
+						console.log("media.mediaUrl: ", media);
+					} else {
+						fileType = checkFileType(media.altText);
+						fileName = handleFileName(media.altText);
+					}
+
+					content = `<span href="${media.mediaUrl}" target="_blank" class="file_attachment">
+                                <i class="fa fa-paperclip"></i>
+                                <span style="color: #576c7d; display: flex; flex-direction: column">
+                                    <span>
+                                        <span style="display: inline-block;
+                                            max-width: 93px;
+                                            overflow: hidden;
+                                            -webkit-line-clamp: 1;
+                                            -webkit-box-orient: vertical;
+                                            vertical-align: bottom;
+                                            white-space: nowrap;
+                                            text-overflow: ellipsis;
+                                            word-break: break-word;">${fileName.firstName}</span>
+                                        <span>${fileName.lastName}.${fileName.extensionFile}</span>
+                                    </span>
+                                    <span>165.6 KB | <a href=${mediaUrl} target="_blank"> Download</a></span>
+                                </span>
+                            </span>`
+
+				}
+
+				break;
+		}
+
+		if (comment) {
+			comment = `<span style="border: 1px solid #ddd;
+                        background: #FFEFE8;
+                        padding: 4px 8px;
+                        border-bottom-left-radius: 5px;
+                        border-bottom-right-radius: 5px;">${comment}</span>`
+		}
+
+		///////////
+		if (timeFormat == undefined) timeFormat = dateCreated
+		if (type.toLowerCase().trim() == 'manual') {
+			$('.chat-item:last-child').after(`
+                <div id="${in_idTicket}" class="chat-item me flx">
+                    <div class="chat-item__avatar">
+                        <img src="${avatar}" onerror='this.src = "#appResource.avatar_mau.jpg#"' alt="user-avatar"/>
+                    </div>
+                    <div style="flex-direction: column; align-items: flex-end; gap: 4px" class="flx">
+                        <span style="font-size: 14px; font-weight: bold; text-shadow: none">${name}</span>
+                        <div style="gap: 8px; flex-direction: row-reverse;" class="flx">
+                            <div id="chatItemContent" class="chat-item__content flx" style="position: relative">
+                                <div>
+                                    <span>${content}</span>
+                                </div>
+                                <div style="align-self: flex-end; display: flex; justify-content: flex-end; position: absolute; bottom: -1px; right: 4px; height: 5px">
+                                    <span style="color:${_color}" id="sendStatus" class="send-status">
+                                        ${_status}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `)
+		} else if (type.toLowerCase().trim() == 'send' || type.toLowerCase().trim() == 'new_send' || type.toLowerCase().trim() == 'upload') {
+			console.log('send || upload')
+			let lastestChat = null;
+			if (type.toLowerCase().trim() == 'new_send' || type.toLowerCase().trim() == 'upload') {
+				lastestChat = function (in_element) {
+					$('.chat-item:last-child').after(in_element);
+				}
+			} else {
+				lastestChat = function (in_element) {
+					$('#x-more-div').after(in_element);
+				}
+			}
+
+			lastestChat(`<div id="${in_idTicket}" class="chat-item me flx">
+                <div class="chat-item__avatar" style='padding-top: 2.3rem;'>
+                    <img src="${avatar}" onerror='this.src = "#appResource.avatar_mau.jpg#"' alt="user-avatar"/>
+                </div>
+                <div style="flex-direction: column; align-items: flex-end; gap: 4px" class="flx">
+                    <span style="font-size: 14px; font-weight: bold; text-shadow: none">${name}</span>
+                    <div style="gap: 8px; flex-direction: row-reverse;" class="flx">
+                        <div class="chat-item__content flx" id="chatItemContent" style="position: relative">
+                            <div style="margin: 5px">
+                                <span>${content}</span>
+                            </div>
+                            <div style="align-self: flex-end; display: flex; justify-content: flex-end; position: absolute; bottom: -1px; right: 4px; height: 5px">
+                                <span style="color:${_color}" id="sendStatus" class="send-status">
+                                    ${_status}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 4px">
+                        <span id="sendTime" data-date="${date}" class="send-time">${timeMessageSent}</span>
+                    </div>
+                </div>
+        </div>`)
+			// Scroll after upload
+			endScrollTop();
+		} else if (type.toLowerCase().trim() == 'rsync' || type.toLowerCase().trim() == 'new_rsync') {
+			console.log('rsync')
+			let lastestChat = null;
+			if (type.toLowerCase().trim() == 'new_rsync') {
+				lastestChat = function (in_element) {
+					$('.chat-item:last-child').after(in_element);
+				}
+			} else {
+				lastestChat = function (in_element) {
+					$('#x-more-div').after(in_element);
+				}
+			}
+			lastestChat(`<div id="${in_idTicket}" class="chat-item flx">
+                <div class="chat-item__avatar" style='padding-top: 2.3rem;'>
+                    <img src="${avatar}" onerror='this.src = "#appResource.avatar_mau.jpg#"' alt="user-avatar"/>
+                </div>
+                <div style="flex-direction: column; gap: 4px" class="flx">
+                    <span style="font-size: 14px; text-shadow: none; font-weight: bold; color: #2560ab;">${name}</span>
+                    <div style="gap: 8px" class="flx">
+                        <div id="chatItemContent" class="chat-item__content flx" style="position: relative">
+                            <div style="margin: 5px">
+                                <span>${content}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <span id="sendTime" data-date="${date}" class="send-time">${timeMessageSent}</span>
+                </div>
+        </div>`)
+		} else {
+			$('.chat-item:last-child').after(`<div id="${in_idTicket}" class="chat-item flx">
+                <div class="chat-item__avatar" style='padding-top: 2.3rem;'>
+                    <img src="${avatar}" onerror='this.src = "#appResource.avatar_mau.jpg#"' alt="user-avatar"/>
+                </div>
+                <div style="flex-direction: column; gap: 4px" class="flx">
+                    <span style="font-size: 14px; font-weight: bold; text-shadow: none">${name}</span>
+                    <div style="gap: 8px" class="flx">
+                        <div id="chatItemContent" class="chat-item__content flx">
+                            <div style="margin: 5px">
+                                <span>${content}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <span id="sendTime" data-date="${date}" class="send-time">
+                        ${comment}
+                        <p>${timeMessageSent}</p></span>
+                </div>
+            </div>`)
+		}
+	}
+
+	// ----- Handle Message -----
+	function handleMsg(id, date, rows, page) {
+
+		date = encodeURIComponent(date)
+		$.ajax({
+			url: `/jw/api/form/omni_api_chat_msg/get?KEY=${id}&date=${date}&rows=${rows}&page=${page}`,
+			dataType: 'json',
+			async: false,
+			headers: {
+				'api_id': '#envVariable.api_id_2#',
+				'api_key': '#envVariable.api_key_2#',
+				'accept': 'application/json'
+			},
+			type: 'GET',
+			success: function (obj) {
+				// console.log(obj)
+
+				// Ngăn thông báo lỗi khi trả về nội dung rỗng
+				// Ngăn lỗi lặp nội dung
+				if (obj.rs == '' || preJSON == obj.rs) {
+					$('#x-more-div').remove()
+					return
+				}
+
+				var cus_rs_n = JSON.parse(obj.rs)
+				groupMessagesByDay = cus_rs_n.sort((a, b) => new Date(a.dateUpdate) - new Date(b.dateUpdate))
+
+
+				// Nếu nội dung ít thì ẩn nút "More Message"
+
+				if (cus_rs_n.length < 5) {
+					$('#x-more-div').attr('style', 'display: none')
+				}
+				// createChat(content, dateCreated, name, type, date, status, in_idTicket)
+				for (i = 0; i < cus_rs_n.length; i++) {
+					createChat(decodeHtmlEntities(cus_rs_n[i].content), cus_rs_n[i].dateCreated, cus_rs_n[i].name, cus_rs_n[i].type, cus_rs_n[i].date, cus_rs_n[i].status, cus_rs_n[i].id,
+						cus_rs_n[i].avatar, cus_rs_n[i].content_type, cus_rs_n[i].media, cus_rs_n[i].comment, cus_rs_n[i].attachments
+					)
+				}
+				preJSON = obj.rs;
+				handleFacebookPolicy();
+			}
+		});
+	}
+
+	// ----- Handle Header And Background -----
+	function handleHeaderAndBackground(e) {
+		let stringAlt = $(e.target).closest('.msg-item').find('.conv-item__avatar img').attr('alt').trim().toLocaleLowerCase();
+		let avatar = $(e.target).closest('.msg-item').find('.conv-item__avatar img').attr('src');
+
+		if (stringAlt.indexOf('zalo') != -1) {
+			changeTag('header #tagType', 'sap sap-zaloIcon', 'Zalo-Icon', avatar)
+			$('.right-box.col-8 .right-box__overlay').children().toggle("fast", "swing", () => {
+				$('.right-box.col-8 .right-box__overlay').html(`<img style="height: 90px" src="#appResource.ZaloBackground.svg#" alt="Zalo-Background"/>`)
+			})
+		} else if (stringAlt.indexOf('Comment') != -1) {
+			changeTag('header #tagType', 'sap sap-FB', 'FB-Icon', avatar)
+			$('.right-box.col-8 .right-box__overlay').children().toggle("fast", "swing", () => {
+				$('.right-box.col-8 .right-box__overlay').html(`<img style="height: 68px" src="#appResource.FacebookBackground.svg#" alt="Facebook-Background"/>`)
+			})
+			// changeTag('header #tagType', 'sap sap-FB', 'FB-Icon')
+			// $('.right-box.col-8 .right-box__overlay').children().toggle("fast","swing",()=>{
+			//     $('.right-box.col-8 .right-box__overlay').html(`<img src="#appResource.FacebookBackground.svg#" alt="Facebook-Background"/>`)
+			// })
+		} else if (stringAlt.indexOf('mess') != -1) {
+			changeTag('header #tagType', 'sap sap-MessengerIcon', 'Messenger-Icon', avatar)
+			$('.right-box.col-8 .right-box__overlay').children().toggle("fast", "swing", () => {
+				$('.right-box.col-8 .right-box__overlay').html(`<img style="height: 68px" src="#appResource.MessengerBackground.svg#" alt="Messenger-Background"/>`)
+			})
+		} else if (stringAlt.indexOf('chat') != -1) {
+			changeTag('header #tagType', 'sap sap-chat', 'Chat-Icon', avatar)
+			$('.right-box.col-8 .right-box__overlay').children().toggle("fast", "swing", () => {
+				$('.right-box.col-8 .right-box__overlay').html(`<img style="height: 68px" src="#appResource.live-chat-background.png#" alt="Live-Background"/>`)
+			})
+		}
+		changeTitle(e)
+	}
+
+	// ----- Change Header Tag -----
+	function changeTag(selector, className, alt, avatar) {
+		$(selector).replaceWith(`<img src="${avatar}" onerror='this.src = "#appResource.avatar_mau.jpg#"'>`);
+		/*
+		$(selector).attr({
+		  'class': className,
+		  alt
+		})
+		*/
+	}
+
+	// ----- Change Title -----
+	function changeTitle(e) {
+		let title_name = $(e.target).closest('.msg-item').find('.conv-item__name').attr('data-agent').trim();
+		let title_type = $(e.target).closest('.msg-item').find('.tage_type').text().trim();
+		let title_tag = "Sample"
+		let title_class = $(e.target).closest('.msg-item').find('#phanLoai');
+		if (title_class.length > 0) {
+			title_class = title_class[0].outerHTML
+			title_name += `<span style="margin-left: 8px">${title_class}</span>`;
+		}
+		$('header .header__title__name').html(title_name);
+		$('header .header__title__type').html(title_type);
+		$('header .header__title__tag').html(title_tag);
+	}
+
+	// ----- Create Box Chat -----
+	function createBoxChat(idTicket, fkKH) {
+		$('#rightBoxContent').append(`
+    <header class="header flx">
+        <div class="header__avatar">
+            <i id="tagType" class="sap sap-FB" alt="Icon"></i>
+        </div>
+        <div class="header__title flx">
+            <div class="header__title__type"></div>
+            <div data-id=${idTicket} class="header__title__name">
+                <span></span>
+            </div>
+        </div>
+        <div id="moreActions" class="leftBoxTitle__action-item">
+            <i class="fa fa-ellipsis-v"></i>
+        </div>
+        <div class="dropdown">
+            <span class="header__drop-btn" id="headerDropBtn">
+                Open
+                <i class="fa fa-chevron-down" style="margin-left: 5px"></i>
+            </span>
+            <div class="dropdown-content">
+                <span id="inputPhone" style="width: 0px">
+                    <input placeholder="SĐT" type="text" />
+                </span>
+                <span id="makeCall" class="header__action__item make-call">
+                    <i class="sap sap-phone"></i>
+                    Tạo cuộc gọi
+                </span>
+                <span id="convertTicketBtn" class="header__action__item">
+                    <i class="sap sap-tickets"></i>
+                    Tạo ticket
+                </span>
+                <span id="sendEmailBtn" class="header__action__item">
+                    <i class="sap sap-email"></i>
+                    Gửi email
+                </span>
+                <span id="infoBtn" data-fkKH="${fkKH}" class="header__action__item" >
+                    <i class="sap sap-info"></i>
+                    Thông tin khách hàng
+                </span>
+                <span id="historyChatBtn" data-fkKH="${fkKH}" class="header__action__item" >
+                    <i style="font-size:1.2rem!important" class="sap sap-history-chat"></i>
+                    Lịch sử trò chuyện
+                </span>
+            </div>
+        </div>
+    </header>
+    <article>
+        <div class="message-view">
+            <div class="message-view__blur__overlay"></div>
+            <div class="message-view__scroll">
+                <div id="messageViewInner" class="message-view__scroll__inner">
+                    <div id="x-more-div" class="Center"><span><a id="loadfull" class="form-button btn button" style="margin-left: 40%;">More Message</a></span></div>
+                </div>
+            </div>
+        </div>
+        <hr class="message-separator">
+            <span class="message-separator__date">21 Mar</span>
+        </hr>
+    </article>
+    <div class="chat-container">
+        <div class="chat-tool-bar">
+            <div class="tools-wrapper">
+                <div id="toolTemplate" class="tool-reply-btn">
+                    <i class="fa fa-envelope"></i>
+                    <span>Reply</span>
+                    <i class="fa fa-angle-down"></i>
+                </div>
+                <div id="toolTemplate" class="tool-reply-btn">
+                    Private Note
+                </div>
+                <div id="toolTemplate" class="tools tool-template" title="Templates">
+                    <i class="sap sap-templates"></i>
+                </div>
+                <div id="toolTag" class="tools tool-tag" title="Dán nhãn">
+                    <i class="sap sap-tag"></i>
+                </div>
+                <div style="display: none" id="toolNewChat" class="tools tool-new-chat" title="New chat">
+                    <i class="sap sap-new-chat"></i>
+                </div>
+                <div id="toolFileAttach" class="tools tool-tag" title="File attached">
+                    <i class="fa fa-paperclip"></i>
+                </div>
+            </div>
+            <div id="chatToolbarExpandBtn" class="chat-tool-bar__expand-btn">
+                <i class="fa fa-expand"></i>
+            </div>
+        </div>
+        <div id="chatInput" class="chat-input">
+            <div class="upload-container"></div>
+            <div class="chat-input__content">
+                <div class="chat-input__content-actions">
+                    <div class="chat-input__btn-group">
+                        <div id="underDevelopment" class="chat-input-btns" title="Under Development">
+                            <span class="">
+                                <i class="fa fa-font"></i>
+                            </span>
+                        </div>
+                        <div id="underDevelopment2" class="chat-input-btns" title="Under Development">
+                            <span class="">
+                                <i class="fa fa-book"></i>
+                            </span>
+                        </div>
+                        <div id="underDevelopment3" class="chat-input-btns" title="Under Development">
+                            <span class="">
+                                <i class="fa fa-image"></i>
+                            </span>
+                        </div>
+                        <div id="underDevelopment4" class="chat-input-btns" title="Under Development">
+                            <span class="">
+                                <i class="fa fa-paperclip"></i>
+                            </span>
+                        </div>
+                        <div id="underDevelopment5" class="chat-input-btns" title="Under Development">
+                            <span class="">
+                                <i class="fa fa-smile"></i>
+                            </span>
+                        </div>
+                        <div id="resetBtn" class="chat-input-btns" title="Refresh">
+                            <span class="">
+                                <i class="sap sap-refresh"></i>
+                            </span>
+                        </div>
+                        <div id="chatClearBtn" class="chat-input-btns" title="Clear">
+                            <a class="clear-btn">
+                                <div style="color:var(--red)">
+                                    <i class="sap sap-trash"></i>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                    <div id="chatSendBtn" class="chat-send-btn" title="Send">
+                        <a class="send-btn-text">
+                            <i class="fa fa-paper-plane" style="font-size: 16px"></i>
+                            <p>Send</p>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    `)
+		// toggleToolTips($('#resetBtn'),'Làm mới hội thoại');
+		toggleToolTips($('#chatToolbarExpandBtn'), 'Mở rộng');
+		toggleToolTips($('#infoBtn'), 'Thông tin khách hàng');
+		toggleToolTips($('#historyChatBtn'), 'Lịch sử trò chuyện');
+		toggleToolTips($('#convertTicketBtn'), 'Tạo ticket');
+		toggleToolTips($('#makeCall'), 'Tạo cuộc gọi');
+		toggleToolTips($('#sendEmailBtn'), 'Gửi email');
+		toggleToolTips($('#moreActions'), 'Tuỳ chỉnh');
+		toggleToolTips($('#underDevelopment'), 'Under development');
+		toggleToolTips($('#underDevelopment'), 'Under development');
+		toggleToolTips($('#underDevelopment2'), 'Under development');
+		toggleToolTips($('#underDevelopment3'), 'Under development');
+		toggleToolTips($('#underDevelopment4'), 'Under development');
+		toggleToolTips($('#underDevelopment5'), 'Under development');
+		toggleToolTips($('#underDevelopment6'), 'Under development');
+		toggleToolTips($('#underDevelopment7'), 'Under development');
+		toggleToolTips($('#underDevelopment8'), 'Under development');
+		toggleToolTips($('#underDevelopment9'), 'Under development');
+		toggleToolTips($('#underDevelopment10'), 'Under development');
+		toggleToolTips($('.tool-reply-btn'), 'Under development');
+		// toggleToolTips($('#toggleSuggestBox'),'Chọn nhanh mẫu hội thoại');
+
+		//event upload
+		$("#toolFileAttach").on("click", function () {
+			// var fileUploadEle = $(this).parents("#omni_livechat").find("#file_upload").closest(".form-fileupload")
+			// fileUploadEle.trigger('click')
+			// xFileUpload = fileUploadEle.find("input[name='file_upload_path']").val();
+
+			// click2Popup('f_file_upload')
+			$(this).toggleClass("i-active")
+			handleFileUpload(idTicket)
+		})
+
+		// ----- Handle Convert Ticket -----
+		$('#convertTicketBtn').on('click', handleConvertTicket)
+
+		// ----- Handle Dropdown -----
+		$("#headerDropBtn").on("click", handleShowDropdown);
+
+		function handleShowDropdown() {
+			$(".dropdown-content").toggleClass("dropdown__show");
+		}
+
+		$('.panel-dropdown').change(function () {
+			$('.panel-dropdown').prop('disabled', true);
+			$(this).prop('disabled', false);
+		});
+	}
+	function update_is_uploadUI() {
+		is_uploadUI = false;
+	}
+	function handleFileUpload(idTicket) {
+		if (!is_uploadUI) {
+			is_uploadUI = true;
+			var x_uploadHTML = `<iframe onload="" name='iframe_upload' id="iframe_upload" src="f_file_upload?embed=true&ticketId=${idTicket}&messageId=${messageId}&tenKH=${_tenKH}&type=${_type}"
+            frameborder="0" border="0" cellspacing="0" style="border-style: none;width: 100%;min-height: 103px;"></iframe>`
+			$("#chatInput .upload-container").text("");
+			$("#chatInput .upload-container").append(x_uploadHTML);
+		}
+
+		let x_upload = $(".upload-container");
+		let x_chat = $(".chat-input__content");
+
+		if (x_upload.css("display") == "none") {
+			x_upload.css({ "display": "flex" });
+			x_chat.css({ "display": "none" });
+		} else {
+			x_upload.css({ "display": "none" });
+			x_chat.css({ "display": "flex" });
+		}
+
+	}
+
+	function popupTestPhanCong(_ticket) {
+		var x_url = `${userviewURL}form_livechat_phancong?embed=true&lcTicket=${_ticket}`;
+		click2Popup(x_url);
+	}
+
+	function popupPhanCong(_ticket) {
+		var x_url = `${userviewURL}ticketPhanCong?nhomm=000005&typee=ticket&lcTicket=${_ticket}`;
+		click2Popup(x_url);
+	}
+
+	function popupDongTicket(_ticket, _KH) {
+		var x_url = `${userviewURL}form_close_ticket?embed=true&id=${_ticket}&IDKH=${_KH}`;
+		click2Popup(x_url);
+	}
+	function popupNhieuTinNhan() {
+		var x_url = `ds_mes`;
+		click2Popup(x_url);
+	}
+	function getOrdinal(_date) {
+		if (_date > 3 && _date < 21) return "th";
+		switch (_date % 10) {
+			case 1: return "st";
+			case 2: return "nd";
+			case 3: return "rd";
+			default: return "th"
+		}
+	}
+
+	// ----- Create New Ticket -----
+	function createNewTicket(messageId, isNew, type, content, agent, time, idTicket, fkKH, in_class, codeTicket, sla_message, sla_conversation, isClosed, conv_status, in_socialKey, in_source, isNewChat, avatar, channel_name) {
+		let tag = '';
+		let agent_html = agent;
+		let className = '';
+		let timeFormat;
+		let formattedDate
+		let timeDate = "";
+		let timeHour = "";
+		let ticketButton = "";
+		let checkTag = false;
+		let html_tag = `<div class="tage_type" >${type}</div>`;
+		if (time != null) {
+			let monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+			timeFormat = time.split('.')[0].split(' ');
+			timeDate = timeFormat[0];
+			timeHour = timeFormat[1];
+			let date = new Date(timeDate);
+			let day = date.getDate();
+			let month = monthNames[date.getMonth()];
+			let ordinal = getOrdinal(day)
+			formattedDate = day + ordinal + " " + month
+		}
+		if (time.includes('T')) {
+			timeFormat = timeFormat[0].split('T');
+			timeDate = timeFormat[0];
+			timeHour = timeFormat[1];
+		}
+
+		if (!avatar) {
+			avatar = '';
+		}
+
+		if (!agent) {
+			agent_html = "Chưa được phân công";
+		}
+
+		if (in_class.type) {
+			let _textColor = '';
+			if (in_class.color == '#ECF0F1') _textColor = 'var(--icon-color) !important'
+			agent_html = `<span id="phanLoai" class="classification" style="background-color:${in_class.color};color:${_textColor}">${in_class.type}</span>`;
+		}
+
+		if (codeTicket) {
+			codeTicket = `${codeTicket}`;
+			ticketButton = `<a onclick='popupDongTicket("${codeTicket}","${fkKH}")'
+                class="conv-item__more-close-ticket" title="Đóng ticket">
+                    <i class="sap sap-tickets"></i>
+                </a>`
+		} else {
+			codeTicket = '';
+		}
+
+		if (sla_conversation == '1') {
+			// Quá hạn
+			sla_conversation = 'sla_out'
+		} else if (sla_conversation == '2') {
+			// Sắp đến hạn
+			sla_conversation = 'sla_soon'
+		}
+
+		let unread = '';
+		let sla_color = '';
+		if (isNew != '') {
+			unread = 'unread'
+			if (sla_message && sla_message == '1') {
+				sla_color = 'sla_out';
+				// html_tag = `<div style="background:var(--red)" class="tage_type">Quá hạn</div>`;
+			} else if (sla_message && sla_message == '2') {
+				sla_color = 'sla_soon';
+				// html_tag = `<div style="background:var(--deals-color)" class="tage_type">Sắp đến hạn</div>`;
+			}
+		}
+		switch (type.toLowerCase().trim()) {
+			case 'zl':
+				tag = 'zalo';
+				className = 'sap sap-zaloIcon';
+				// if(html_tag == `<div class="tage_type">${type}</div>`) html_tag = '';
+				break;
+			case 'zalo':
+				tag = 'zalo';
+				className = 'sap sap-zaloIcon';
+				html_tag = `<div class="tage_type" >
+                                <img src="#appResource.zalo_icon.png#" alt="Zalo-Background" style="
+                                    width: 11px;
+                                    height: 11px;
+                                    border: none;
+                                ">
+                                <span style="display:none">${channel_name}</span>
+                            </div>`;
+				// if(html_tag == `<div class="tage_type">${type}</div>`) html_tag = '';
+				break;
+			case 'facebook':
+				tag = 'facebook';
+				className = 'sap sap-MessengerIcon';
+				html_tag = `<div class="tage_type" >
+                                <img src="#appResource.messenger.png#" style="
+                                    width: 11px;
+                                    height: 11px;
+                                    border: none;
+                                ">
+                                <span style="display:none">${channel_name}</span>
+                            </div>`;
+				// if(html_tag == `<div class="tage_type">${type}</div>`) html_tag = '';
+				break;
+			case 'comment':
+				tag = 'fb';
+				className = 'sap sap-FB';
+				html_tag = `<div class="tage_type" >
+                                <img src="#appResource.fb_icon.png#" alt="Comment-Background" style="
+                                    width: 11px;
+                                    height: 11px;
+                                    border: none;
+                                ">
+                                <span style="display:none">${channel_name}</span>
+                            </div>`;
+				// html_tag = `<div class="tage_type">FB_CMT</div>`;
+				break;
+			case 'facebook_inbox':
+				tag = 'messenger';
+				className = 'sap sap-MessengerIcon';
+				// html_tag = `<div class="tage_type">FB_Inbox</div>`;
+				break;
+			case 'messenger':
+				tag = 'messenger';
+				className = 'sap sap-MessengerIcon';
+				html_tag = `<div class="tage_type">
+                                <img src="#appResource.messenger.png#" alt="Messenger-Background" style="
+                                    width: 11px;
+                                    height: 11px;
+                                    border: none;
+                                ">
+                                <span style="display:none">${channel_name}</span>
+                            </div>`;
+				// html_tag = `<div class="tage_type">FB_Inbox</div>`;
+				break;
+			case 'web':
+				tag = 'live-chat';
+				className = 'sap sap-chat';
+				html_tag = `<div class="tage_type">
+                                <img src="#appResource.live-chat.png#" alt="live-chat-Background" style="
+                                    width: 11px;
+                                    height: 11px;
+                                    border: none;
+                                ">
+                                <span style="display:none">${channel_name}</span>
+                            </div>`;
+				// if(html_tag == `<div class="tage_type">${type}</div>`) html_tag = '';
+				break;
+		}
+
+		// Permission
+		// Assign, CloseTicket button
+		let assignButton = "";
+		let closeTicketButton = "";
+		let testAssignButton = "";
+
+
+		// if(hashDepartment == 'Admin' || hashDepartment == 'Manager' || hashDepartment == 'SUP' || hashDepartment == 'SUP_Manager' || hashDepartment == 'SUP_System')
+		// {
+		//     testAssignButton = `<a onclick='popupTestPhanCong("${idTicket}")'
+		//         class="conv-item__more-assign" title="Phân công">
+		//             <i class="sap"></i>
+		//         </a>`
+
+		//     closeTicketButton = `<a onclick='popupDongTicket("${idTicket}","${fkKH}")'
+		//         class="conv-item__more-close-ticket" title="Đóng ticket">
+		//             <i class="sap"></i>
+		//         </a>`
+		// }
+		testAssignButton = `<a onclick='popupTestPhanCong("${idTicket}")'
+                class="conv-item__more-assign" title="Chuyển tiếp">
+                    <i class="sap"></i>
+                </a>`
+
+		closeTicketButton = `<a onclick='popupDongTicket("${idTicket}","${fkKH}")'
+                class="conv-item__more-close-ticket" title="Đóng ticket">
+                    <i class="sap"></i>
+                </a>`
+
+
+		// if(hashUser == 'admin') {
+		//     assignButton = `<a onclick='popupPhanCong("${idTicket}")'
+		//         class="conv-item__more-assign" title="Phân công">
+		//             <i class="sap"></i>
+		//         </a>`
+		// }
+
+		// Create message item
+		console.log(avatar);
+		let boxContent = `<div id="${idTicket}" data-source="${in_source}" data-socialKey="${in_socialKey}" data-tagId="${in_class.id || ''}" data-type="${type}" data-fkKH="${fkKH}" data-messageId="${messageId}" class="msg-item ${unread}" onclick="" isClosed="${isClosed}">
+            <div class="conv-item flx ${sla_conversation}">
+                <div style="display: flex; gap: 4px">
+                    <div class="conv-item__avatar">
+                        <span>
+                            <img src="${avatar}" onerror='this.src = "#appResource.avatar_mau.jpg#"' id="tagType" class="${className} ${sla_color}" alt="${tag}-Icon"/>
+                        </span>
+                    </div>
+                    <div class="conv-item-body flx">
+                        <div class="conv-item__name" data-agent="${content}" title="${content}">
+                            <div id="convItem">
+                                <span>${content}</span>
+                            </div>
+                        </div>
+                        <div class="conv-item-body__main">
+                            <div>
+                                <span style="font-size: 12px">Latest message goes here</span>
+                            </div>
+                        </div>
+                        <div class="conv-item-body__main">
+                            ${html_tag}
+                            <div>
+                                <span fk-agent="${agent}" id="agent" class="agent" style="font-size: 12px">${agent_html}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="conv-item__info" style="gap: 10px; width: 52px">
+                    <div class="conv-item__more-time">
+                        <span>${formattedDate}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between">
+                        <span style="margin-top: 3px">
+                            <i class="fa fa-level-up" style="font-size: 16px; transform: rotate(-90deg);"></i>
+                        </span>
+                        <div class="conv_secondary-avatar">
+                            <img src="${avatar}" onerror='this.src = "#appResource.avatar_mau.jpg#"' alt="user-avatar"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+		if (isNewChat == 'true') {
+			$('#leftBoxContent').prepend(boxContent);
+		} else {
+			$('#leftBoxContent').append(boxContent);
+		}
+	}
+	// ${ticketButton}
+	// <span>${codeTicket}</span>
+	function chat_getSubject(in_page, in_rows, in_date, in_agent, in_convStatus, in_channel, in_account, in_show) {
+		$('.msg-item').remove();
+		if (!in_date) in_date = '';
+		if (!in_agent) in_agent = '';
+		if (!in_convStatus) in_convStatus = '';
+		if (!in_channel) in_channel = '';
+		if (!in_account) in_account = '';
+		if (!in_show) in_show = '';
+		$.ajax({
+			url: `/jw/api/form/omni_api_chat/get?page=${in_page}&rows=${in_rows}&in_date=${in_date}&in_agent=${in_agent}&in_convStatus=${in_convStatus}&in_channel=${in_channel}&in_account=${in_account}&in_show=${in_show}`,
+			dataType: 'json',
+			async: false,
+			headers: {
+				'api_id': '#envVariable.api_id_2#',
+				'api_key': '#envVariable.api_key_2#',
+				'accept': 'application/json'
+			},
+			type: 'GET',
+			success: function (obj) {
+
+				if (obj.rs == '') return
+
+				const selectBox_agent = document.getElementById("selectAgent");
+				const selectBox_conv = document.getElementById("selectStatusConv");
+				const selectBox_channel = document.getElementById("selectChannel");
+				let cus_rs_n = JSON.parse(obj.rs)
+				conversationCountValue = cus_rs_n.length;
+
+				$("#conversationCount").append(conversationCountValue);
+
+				// Make Promise to prevent unload
+				let waitResult = new Promise(function (resolve, reject) {
+					for (i = 0; i < cus_rs_n.length; i++) {
+						createNewTicket(cus_rs_n[i].messageId, cus_rs_n[i].isNew, cus_rs_n[i].kenh_tiep_nhan, cus_rs_n[i].ten, cus_rs_n[i].fkNguoiXuLy,
+							cus_rs_n[i].dateCreated, cus_rs_n[i].id, cus_rs_n[i].fkKH, cus_rs_n[i].class, cus_rs_n[i].codeTicket, cus_rs_n[i].sla_message,
+							cus_rs_n[i].sla_conversation, cus_rs_n[i].isClosed, cus_rs_n[i].conv_status, cus_rs_n[i].social_key, cus_rs_n[i].c_source, '', cus_rs_n[i].avatar, cus_rs_n[i].channel_name)
+						/*
+						// Add Agent to filter selectbox
+						if(!arr_agent.includes(cus_rs_n[i].fkNguoiXuLy)) {
+						  let item = cus_rs_n[i].fkNguoiXuLy;
+						  // Continue when value is empty
+						  if(!item) continue
+						  arr_agent.push(item);
+						  let newOption = document.createElement("option");
+						  newOption.value = item;
+						  newOption.text = item;
+						  selectBox_agent.add(newOption);
+						}
+						  
+						// Add SLA Conversation to filter selectbox
+						if(!arr_status_cov.includes(cus_rs_n[i].sla_conversation)) {
+						  let item = cus_rs_n[i].sla_conversation
+						  arr_status_cov.push(item)
+						  let newOption = document.createElement("option");
+						  newOption.value = item;
+						  (item == '1') ? item = 'Quá hạn' : (item == '2') ? item = 'Sắp đến hạn' : item = 'Trong hạn'
+						  newOption.text = item;
+						  selectBox_conv.add(newOption);
+						}
+						  
+						// Add Channel to filter selectbox
+						if(!arr_channel.includes(cus_rs_n[i].kenh_tiep_nhan)) {
+						  let item = cus_rs_n[i].kenh_tiep_nhan
+						  arr_channel.push(item)
+						  let newOption = document.createElement("option");
+						  newOption.value = item;
+						  (item == 'ZL') ? item = 'Zalo' : (item == 'facebook') ? item = 'Facebook' : ''
+						  newOption.text = item;
+						  selectBox_channel.add(newOption);
+						}
+						*/
+					};
+
+					resolve('DONE');
+				})
+
+				waitResult.then((result) => {
+					if (result == 'DONE') {
+						handleClickConversation('.msg-item');
+						handleUnread('.msg-item.unread');
+						if (idChatFocus) {
+							focusConversation();
+						}
+					}
+				}).catch((err) => {
+					console.error('Error at:', err);
+				})
+			}
+		});
+	}
+	function runReviewMessage(in_type, in_messageId, in_ticketId, in_message) {
+		var settings = {
+			"url": "/jw/api/process/omni_review_message_approver_process/startProcess",
+			"method": "POST",
+			"timeout": 0,
+			"headers": {
+				'api_id': '#envVariable.api_id_2#',
+				'api_key': '#envVariable.api_key_2#',
+				'Accept': 'application/json',
+				'Content-Type': 'application/json'
+			},
+			"data": JSON.stringify({ "type": in_type, "inReplyTo": in_messageId, "in_fk": in_ticketId, "message": in_message, "groupId": hashGroup, "supervisor": hashSuppervisor }),
+			"isAsync": false
+		};
+
+		$.ajax(settings).done(function (response) {
+			console.log('Response status:', response);
+		});
+	}
+	function connSocket() {
+		try {
+			//debugger;
+			var client = Stomp.client('wss://' + location.host + '/ntf/ws');
+			// var client = Stomp.client(hostxx+'/ntf/ws');
+			client.heartbeat.outgoing = 10000;
+			client.heartbeat.incoming = 0;
+			var headers = {
+				login: 'notification',
+				passcode: 'notification'
+			};
+			client.reconnect_delay = 1000;
+			client.debug = function (e) { };
+			var on_connect = function (x) {
+				console.log('#currentUser.username#')
+				id = client.subscribe('/exchange/agent-#currentUser.username#', function (m) {
+					xlsocket(m.body);
+				});
+
+				console.log("connected1: " + client.connected);
+			};
+			var on_error = function (error) {
+				console.log("error socket1");
+			};
+			client.connect(headers, on_connect, on_error);
+		} catch (e) { }
+	}
+
+	function connSocketIDTicket(in_IdTicket) {
+		try {
+			// clientCRMID = Stomp.client(hostxx+'/ntf/ws');
+			clientCRMID = Stomp.client('wss://' + location.host + '/ntf/ws');
+			clientCRMID.heartbeat.outgoing = 10000;
+			clientCRMID.heartbeat.incoming = 0;
+			var headers = {
+				login: 'notification',
+				passcode: 'notification'
+			};
+			clientCRMID.reconnect_delay = 1000;
+			clientCRMID.debug = function (e) { };
+			var on_connect = function (x) {
+				socket_id_ticket = clientCRMID.subscribe('/exchange/crm-' + in_IdTicket, function (m) {
+					runUpdateMessage(m.body)
+				});
+				// console.log("connected crm-ticket: " + clientCRMID.connected);
+			};
+			var on_error = function (error) {
+				// console.log("error socket crm-ticket");
+			};
+			clientCRMID.connect(headers, on_connect, on_error);
+		} catch (e) { }
+	}
+
+	function runUpdateMessage(message) {
+		try {
+			var x_obj = JSON.parse(message);
+			console.log('runUpdateMessage: ', x_obj);
+			id_message = $(`.chat-item.me#${x_obj.fk}`);
+
+			if (x_obj.type == "send") {
+				if ($(`.chat-item.me#${x_obj.fk}`).length == 0) { // Không tìm thấy tin nhắn
+					if (x_obj.name != hashUser) { // Người nhận khác người gửi
+						console.log('updateMessage');
+
+						(x_obj.type == "rsync") ? x_obj.type = 'new_rsync' : x_obj.type = 'new_send'
+						var currentTicket;
+						currentTicket = $('.header__title__name').attr('data-id');
+
+						let _countMsg = 1;
+						var _xobj = x_obj;
+						_xobj.content = decodeHtmlEntities(_xobj.content);
+						if (_xobj.id == currentTicket) {
+							// let d = new Date(_xobj.dateCreated);
+							let d = 0;
+							let a = Math.round(Math.random() * 100);
+							let b = Math.round(Math.random() * 100);
+							d = a + b;
+							// d = d.getSeconds();
+							d = `${_xobj.id}${d}`;
+
+							appendMessage($('.msg-item.focus')[0], _xobj.content);
+							// createChat(content, dateCreated, name, type, date, status, in_idTicket)
+							if ($(`.chat-item.me#${_xobj.fk}`).length == 0)
+								createChat(_xobj.content, _xobj.dateCreated, _xobj.name, _xobj.type, '', _xobj.status, d, _xobj.avatar, _xobj.content_type, _xobj.media, _xobj.comment, _xobj.attachments);
+							endScrollTop();
+							$('.msg-item').each((i, e) => {
+								if ($(e).attr('id') == _xobj.id) {
+									moveTopNewMessage(e, _xobj.dateCreated);
+								}
+							});
+						}
+					} else { // Người nhận là người gửi
+						handleChat(x_obj.id, x_obj.thongBao, x_obj.statusUpdate);
+					}
+				} else { // Tìm thấy tin nhắn
+					console.log('updateMessage else');
+					handleChat(x_obj.id, x_obj.thongBao, x_obj.statusUpdate);
+
+					x_obj.content = decodeHtmlEntities(x_obj.content);
+					switch (x_obj.status) {
+						// Được duyệt
+						case messageStatus.approved.content:
+							updateMessage(x_obj.dateCreated, x_obj.content, messageStatus.approved.content);
+							break;
+						// Không được duyệt
+						case messageStatus.reject.content:
+							updateMessage(x_obj.dateCreated, x_obj.content, messageStatus.reject.content);
+							break;
+						// Gửi thất bại
+						case messageStatus.fail.content:
+							updateMessage(x_obj.dateCreated, x_obj.content, messageStatus.fail.content);
+							break;
+						// Đã gửi
+						case messageStatus.success.content:
+							updateMessage(x_obj.dateCreated, x_obj.content, messageStatus.success.content);
+							break;
+						// Đang duyệt
+						case messageStatus.approval.content:
+							updateMessage(x_obj.dateCreated, x_obj.content, messageStatus.approval.content);
+							break;
+
+					}
+				}
+			} else if (x_obj.type == "rsync") {
+				let xobj = x_obj;
+				(xobj.type == "rsync") ? xobj.type = 'new_rsync' : xobj.type = 'new_send'
+				var currentTicket;
+				currentTicket = $('.header__title__name').attr('data-id');
+
+				let _countMsg = 1;
+				var _xobj = xobj;
+				_xobj.content = decodeHtmlEntities(_xobj.content);
+				if (_xobj.id == currentTicket) {
+					if (_xobj.nxl !== hashUser) {
+						appendMessage($('.msg-item.focus')[0], _xobj.content);
+						// createChat(content, dateCreated, name, type, date, status, in_idTicket)
+						console.log($(`.chat-item.me#${_xobj.id}`));
+						console.log('crm id_last_message: ', id_last_message);
+						console.log('_xobj.fk: ', _xobj.id);
+
+
+
+						//let d = new Date(_xobj.dateCreated);
+						let d = 0;
+						let a = Math.round(Math.random() * 100);
+						let b = Math.round(Math.random() * 100);
+						d = a + b;
+						// d = d.getSeconds();
+						d = `${_xobj.id}${d}`;
+
+						if ($(`.chat-item.me#${d}`).length == 0 && id_last_message != d) {
+							createChat(_xobj.content, _xobj.dateCreated, _xobj.name, _xobj.type, '', _xobj.status, d, _xobj.avatar, _xobj.content_type, _xobj.media, _xobj.comment, _xobj.attachments);
+							updateMessage(_xobj.dateCreated, _xobj.content, messageStatus.success.content);
+						} else {
+							handleChat(_xobj.id, _xobj.thongBao, x_obj.statusUpdate);
+						}
+
+						endScrollTop();
+						$('.msg-item').each((i, e) => {
+							if ($(e).attr('id') == _xobj.id) {
+								moveTopNewMessage(e, _xobj.dateCreated);
+							}
+						})
+
+					}
+				}
+			}
+		}
+		catch (e) {
+			console.error('Error at:', e);
+		}
+	}
+
+	function updateMessage(in_date, in_content, in_messageStatus) {
+		let status = "";
+		let color = "";
+		id_message.find('#sendTime').text(in_date);
+		id_message.find('.chat-item__content').html(in_content);
+
+		switch (in_messageStatus) {
+			// Được duyệt
+			case messageStatus.approved.content:
+				color = messageStatus.approved.color;
+				status = `<i class="fa fa-check"></i> ${in_messageStatus}`;
+				break;
+			// Không được duyệt
+			case messageStatus.reject.content:
+				color = messageStatus.reject.color;
+				status = `<i class="sap sap-message-error"></i> ${in_messageStatus}`;
+				break;
+			// Gửi thất bại
+			case messageStatus.fail.content:
+				color = messageStatus.fail.color;
+				status = `<i class="sap sap-message-error"></i> ${in_messageStatus}`;
+				break;
+			// Gửi thành công
+			case messageStatus.content:
+				color = messageStatus.success.color;
+				status = `<i class="fa fa-check"></i> ${in_messageStatus}`;
+				break;
+			// Đang duyệt    
+			case messageStatus.approval.content:
+				color = messageStatus.approval.color;
+				status = `<i class="fa fa-check"></i> ${in_messageStatus}`;
+				break;
+
+		}
+		id_message.find('#sendStatus').css('color', color).html(status);
+	}
+
+	function xlsocket(message) {
+		try {
+			//debugger;
+			var xobj = JSON.parse(message);
+			console.log('xlsocket: ', xobj);
+			if (xobj.type == "rsync" || (xobj.type == "send" && xobj.name != hashUser)) {
+				(xobj.type == "rsync") ? xobj.type = 'new_rsync' : xobj.type = 'new_send'
+				var currentTicket;
+				currentTicket = $('.header__title__name').attr('data-id');
+
+				let _countMsg = 1;
+				var _xobj = xobj;
+				_xobj.content = decodeHtmlEntities(_xobj.content);
+				if (_xobj.id == currentTicket) {
+
+					/*
+					if(_xobj.nxl !== hashUser) {
+					  appendMessage($('.msg-item.focus')[0],_xobj.content);
+					  // createChat(content, dateCreated, name, type, date, status, in_idTicket)
+					  console.log($(`.chat-item.me#${_xobj.fk}`));
+					  if($(`.chat-item.me#${_xobj.fk}`).length == 0) {
+						createChat(_xobj.content, _xobj.dateCreated, _xobj.name, _xobj.type, '', _xobj.status,_xobj.fk);
+						updateMessage(_xobj.dateCreated,_xobj.content,messageStatus.success.content);
+					  } else {
+						handleChat(_xobj.id, _xobj.thongBao, x_obj.statusUpdate);
+					  }
+					    
+					  endScrollTop();
+					  $('.msg-item').each((i, e)=>{
+						if($(e).attr('id') == _xobj.id) {
+						  moveTopNewMessage(e, _xobj.dateCreated);
+						}
+					  })
+					    
+					}
+					*/
+
+					appendMessage($('.msg-item.focus')[0], _xobj.content);
+					// createChat(content, dateCreated, name, type, date, status, in_idTicket)
+					console.log($(`.chat-item.me#${_xobj.id}`));
+					console.log('id_last_message: ', id_last_message);
+					console.log('_xobj.fk: ', _xobj.id);
+					// let d = new Date(_xobj.dateCreated);
+					let d = 0;
+					let a = Math.round(Math.random() * 100);
+					let b = Math.round(Math.random() * 100);
+					d = a + b;
+
+					// d = d.getSeconds();
+					d = `${_xobj.id}${d}`;
+
+					if ($(`.chat-item.me#${d}`).length == 0 && id_last_message != d) {
+						createChat(_xobj.content, _xobj.dateCreated, _xobj.name, _xobj.type, '', _xobj.status, d, _xobj.avatar, _xobj.content_type, _xobj.media, _xobj.comment, _obj.attachments);
+						updateMessage(_xobj.dateCreated, _xobj.content, messageStatus.success.content);
+					} else {
+						handleChat(_xobj.id, _xobj.thongBao, x_obj.statusUpdate);
+					}
+
+					endScrollTop();
+					$('.msg-item').each((i, e) => {
+						if ($(e).attr('id') == _xobj.id) {
+							moveTopNewMessage(e, _xobj.dateCreated);
+						}
+					})
+
+				} else {
+					console.log($(`.msg-item#${_xobj.id}`).length)
+					if ($(`.msg-item#${_xobj.id}`).length > 0) {
+						$('.msg-item').each((i, e) => {
+							if (_xobj.id !== currentTicket) {
+								if ($(e).attr('id') == _xobj.id) {
+
+									moveTopNewMessage(e, _xobj.dateCreated);
+									appendMessage(e, _xobj.content);
+
+									if ($(e).find('#convItem .count-unread').text() != '') {
+										_countMsg = parseInt($(e).find('#convItem .count-unread').text()) + 1
+										$(e).find('#convItem .count-unread').remove()
+										if (_countMsg > 9) _countMsg = '+9'
+									}
+									$(e).addClass('unread');
+									$(e).find('#convItem').append(`<span class="count-unread">${_countMsg}</span>`);
+								}
+							}
+						});
+					} else {
+						// Append new conversations to UI
+						handleNewConversation(xobj);
+					}
+				}
+			} else if (xobj.sla_message && xobj.sla_conversation) {
+				handleSLA(xobj);
+			}
+		} catch (e) { }
+	}
+
+	// ----- Handle new message -----
+	function appendMessage(e, _message) {
+		alertTone();
+		let _element = $(e).find('#agent');
+		//Append new message
+		let x_checkContent = false;
+		if (_message.includes('/emoticon/') && (x_checkContent == false)) {
+			_element.append(`<i class="sap sap-backup-sticker"></i> Sticker`);
+			x_checkContent = true;
+		};
+		if (_message.includes('<img') && (x_checkContent == false)) {
+			_element.append(`<i class="sap sap-backup-image"></i> Hình ảnh`);
+			x_checkContent = true;
+		};
+		if (x_checkContent == false) {
+			// _element.append(_message);
+			x_checkContent = true;
+		};
+	}
+
+	function moveTopNewMessage(in_selector, in_time) {
+		let timeFormat;
+		let timeDate = "";
+		let timeHour = "";
+		if (in_time != null) {
+			timeFormat = in_time.split('.')[0].split(' ');
+			timeDate = timeFormat[0];
+			timeHour = timeFormat[1];
+			timeFormat = timeFormat.join('');
+		}
+		if (in_time.includes('T')) {
+			timeFormat = timeFormat.split('T');
+			timeDate = timeFormat[0];
+			timeHour = timeFormat[1];
+		}
+
+		$(in_selector).find('.conv-item__more-time span:eq(0)').text(timeDate);
+		$(in_selector).find('.conv-item__more-time span:eq(1)').text(timeHour);
+		$('#leftBoxContent').prepend($(in_selector));
+	}
+
+
+	toggleToolTips($('#toggleHide'), 'Lịch sử chat');
+	toggleToolTips($('#search-button'), 'Tìm kiếm');
+	toggleToolTips($('#refreshPage'), 'Làm mới trang');
+
+
+	function toggleToolTips(in_selector, in_message) {
+		in_selector.each((i, e) => {
+			$(e)[0].onmouseenter = (event) => {
+				left_tips_index = layer.tips(in_message, e)
+			};
+			$(e)[0].onmouseout = (event) => {
+				layer.close(left_tips_index);
+			};
+		});
+	};
+
+	function handleChat(in_id, in_message, in_status) {
+		console.log('handleChat: ', in_status)
+		if (in_status) {
+			in_message = 'Đã đủ số lượng câu thoại, hộp thoại sẽ đóng sau 5s';
+			showMessage(in_message);
+			setInterval(() => {
+				if (!$(document, window.parent.document).find(`.msg-item#${in_id}`).hasClass('focus')) {
+					$(document, window.parent.document).find(`.msg-item#${in_id}`).fadeOut();
+				}
+			}, 250);
+			setTimeout(() => {
+				if ($(document, window.parent.document).find(`.msg-item#${in_id}`).hasClass('focus')) {
+					clearRightBox();
+				}
+				$(document, window.parent.document).find(`.msg-item#${in_id}`).fadeOut();
+			}, 5000);
+		} else if (!in_status && in_message !== '' && in_message) {
+			showMessage(in_message, 'show');
+		}
+		endScrollTop();
+	}
+
+	function addInputChatBox() {
+		$('#chatInput').show();
+		$('#toolTag').show();
+		$('#toolNewChat').hide();
+		$('div[id^="richInput"][id$="editor_container"]').addClass('rich-input').prependTo('.chat-input__content')
+		$('textarea[name="richInput"]').prependTo('.chat-input__content')
+	}
+
+	function clearInputChatBox() {
+		$('#chatInput').hide();
+		// Move to hidden place to prevent remove
+		$('div[id^="richInput"][id$="editor_container"]').prependTo('#section2 div.form-column div.form-cell');
+		$('textarea[name="richInput"]').prependTo('#section2 div.form-column div.form-cell');
+	}
+
+	function clearRightBox() {
+		clearInputChatBox();
+		$('.right-box .right-box__overlay').html(`<i class="sap sap-tickets"></i>`);
+		$('.right-box #rightBoxContent').empty();
+	}
+
+	function showMessage(in_message, in_type) {
+		if (!in_type) clearInputChatBox();
+
+		$('#messageViewInner').append(`<div id="closeThisTicket" class="chat-item me flx" style="justify-content:center">
+                <div style="flex-direction: column; align-items: flex-end; gap: 4px" class="flx">
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-size: 14px; text-shadow: none"></span>
+                        <span id="sendTime" data-date="" style="align-self: flex-end" class="send-time"></span>
+                    </div>
+                    <div style="gap: 8px; flex-direction: row-reverse;" class="flx">
+                        <div style="background: var(--text-secondary); font-weight: 600; position: relative" id="chatItemContent" class="chat-item__content flx">
+                            <div>
+                                <span>${in_message}</span>
+                            </div>
+                            <div style="align-self: flex-end;">
+                                <span id="sendStatus" class="send-status">
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>`);
+		// $('.chat-item:last-child').after();
+	}
+
+	// Tin nhắn mới chưa có trên giao diện
+	function showNewMessage(in_cus, in_time) {
+		let ins_html = $(`<section onclick="$('.x-alert').remove();xadmin.add_tab('Live Chat','${userviewURL}cfs_tickets',true)" class="x-alert" data-time="10">
+            <div class="alert alert-simple alert-warning" style="color:var(--text-color);background-color:var(--white);border-radius: 5px 5px 0 0;
+            border:1px solid #ddd;box-shadow:0px 0px 2px #ddd; max-width:400px">
+                <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                        <p style="font-weight:600;color:var(--blue)">Có sự vụ mới, bấm vào đây để mở.</p>
+                        <i class="sap sap-info"></i>
+                    </div>
+                    <p class="x-name limit-line" style="font-weight:600">${in_cus} - Đã nhắn tin cho bạn</p>
+                    <p class="limit-line">${in_time}</p>
+                </div>
+            </div>
+            <div class="x-load" style="background-color:var(--blue-2-color)"></div>
+        </section>`);
+
+		$("#x-notification #add-notication", window.parent.document).before(ins_html)
+	}
+
+	function checkTicketClosed(in_id) {
+		if (isCheckTicketClosedDone) return;
+		isCheckTicketClosedDone = true;
+		var settings = {
+			"url": "/jw/api/list/list_omni_tickets?d-1569704-fn_id=" + in_id,
+			"method": "GET",
+			"timeout": 0,
+			"headers": {
+				'api_id': '#envVariable.api_id_2#',
+				'api_key': '#envVariable.api_key_2#',
+				'Accept': 'application/json',
+				'Content-Type': 'application/json'
+			},
+			"isAsync": false
+		};
+
+		$.ajax(settings).done(function (response) {
+			let ticketStatus = response.data[0].status;
+			console.log('Ticket status:', ticketStatus);
+			// if(ticketStatus == 'Đóng') {
+			//     handleChat(in_id,'',true);
+			// }
+			// if($(e.target).closest('.msg-item').attr('isClosed') == '1')
+			if (ticketStatus !== 'Chưa xử lý') {
+				clearInputChatBox();
+				$('#toolTag').css('display', 'none');
+				$('#toolNewChat').css('display', 'block');
+				showMessage(`Trạng thái hội thoại: ${ticketStatus}`);
+			}
+			isCheckTicketClosedDone = false;
+		});
+	}
+
+	// Handle alertTone
+	function alertTone() {
+		$('#chatAudio')[0].play();
+	}
+
+	// Handle new conversation
+	function handleNewConversation(xobj) {
+		alertTone();
+		/*
+		let demo_obj = {
+		  "id": "9f285bce-b991-4350-a10d-5998c22baf1d",
+		  "fk": "d64767e1-d105-4033-8020-74153c181a14",
+		  "name": "Tin Le",
+		  "dateCreated": "2023-11-03 13:33:41",
+		  "content": "<p>Tín</p><p></p>",
+		  "messageId": "9050588015358485316---4035278197345783600",
+		  "type": "new_rsync",
+		  "nxl": "",
+		  "source": "Công ty cổ phần phân phối Quốc tế IDB",
+		  "slgTT": 0,
+		  "thongBao": "",
+		  "statusUpdate": false
+		  "social_type":"ZALO"
+		};
+		*/
+
+		createNewTicket(xobj.messageId, xobj.dateCreated, xobj.social_type, xobj.name, xobj.nxl,
+			xobj.dateCreated, xobj.id, xobj.fk, '', '', '',
+			'', '', '', '', xobj.source, 'true', xobj.avatar, xobj.channel_name)
+
+		handleClickConversation('.msg-item');
+		handleUnread('.msg-item.unread');
+
+		// chat_getSubject(1, 100);
+	}
+
+	// Handle SLA
+	function handleSLA(xobj) {
+		console.log('Handle SLA');
+		if (xobj.sla_conversation == '1') {
+			// Qua han
+			$(`.msg-item#${xobj.id} .conv-item`).removeClass('sla_soon').addClass('sla_out');
+		} else if (xobj.sla_conversation == '2') {
+			// Sap den han
+			$(`.msg-item#${xobj.id} .conv-item`).removeClass('sla_out').addClass('sla_soon');
+		} else {
+			$(`.msg-item#${xobj.id} .conv-item`).removeClass('sla_out sla_soon');
+		}
+		if (xobj.sla_message == '1') {
+			// Qua han
+			$(`.msg-item#${xobj.id} #tagType`).removeClass('sla_soon').addClass('sla_out');
+		} else if (xobj.sla_message == '2') {
+			// Sap den han
+			$(`.msg-item#${xobj.id} #tagType`).removeClass('sla_out').addClass('sla_soon');
+		} else {
+			$(`.msg-item#${xobj.id} #tagType`).removeClass('sla_out sla_soon');
+		}
+	}
+
+	// Handle convert ticket
+	function handleConvertTicket() {
+		//
+		var type_omi = '';
+		var type_request = 'social_fb';
+		console.log("_type: ", _type);
+		if (_type == "ZALO") {
+			type_omi = 'Zalo (TVV)';
+			type_request = 'social_zalo';
+		}
+		if (_type == "facebook") {
+			type_omi = "Chat Fanpage (TVV)";
+		}
+
+
+		getDataTicket(_type, _socialKey, function (data_json) {
+			if (data_json) {
+				let url = `ticketProcess?fkKH=${data_json[0].id}&kenh_tiep_nhan=${_type}&${type_request}=${_socialKey}&fkOmni=${_ticketId}`
+				console.log(url);
+				top.xadmin.add_tab(`${data_json[0].c_ten}`, url)
+			} else {
+				top.xadmin.add_tab(`Tạo mới`, `aTicket?tenKH=${_tenKH}&kenh_tiep_nhan=${_type}&${type_request}=${_socialKey}&fkOmni=${_ticketId}`)
+			}
+		});
+
+
+
+		// var xcif = getCif(_fkKH);
+		// var type_omi = '';
+		// console.log("_type: ", _type);
+		// if(_type == "zalo"){
+		//     type_omi = 'Zalo (TVV)';
+		// }
+		// if(_type == "facebook"){
+		//     type_omi = "Chat Fanpage (TVV)";
+		// }
+
+		// var x_url = `${mainUserViewURL}contact?d-7278250-fn_id=${_fkKH}&fkKH=${_fkKH}&fkOmni=${_ticketId}&type_omi=${type_omi}`;
+		// top.xadmin.add_tab(`Loading...`,x_url);
+		/*
+		if(xcif && xcif != "")
+		{
+		  var x_url = `${mainUserViewURL}ticket_new_n?fkKH=${xcif}&fkOmni=${_ticketId}&type_omi=${type_omi}`;
+		  top.xadmin.add_tab(`Loading...`,x_url);
+		  // click2Popup(x_url);
+		}else{
+		  $.toast({text:"CIF không tồn tại!",bgColor:"var(--campaigns-color)",textColor:"#ffffff"});
+		  var x_url = `${mainUserViewURL}contact_old?fkOmni=${_ticketId}&type_omi=${type_omi}`;
+		  top.xadmin.add_tab(`Loading...`,x_url);
+		  // click2Popup(x_url);
+		}
+		*/
+	}
+
+	// Handle send email
+	function handleSendEmail() {
+		var x_url = `prcTicketSendMail?embed=true`;
+		click2Popup(x_url);
+	}
+
+	// ----- Handle New Chat -----
+	function handleNewChat(in_syncId) {
+		$('#toolNewChat').click(newChat);
+		function newChat() {
+			var settings = {
+				"url": "/jw/api/form/omni_api_newchat/a?syncId=" + in_syncId,
+				"method": "GET",
+				"timeout": 0,
+				"headers": {
+					'api_id': '#envVariable.api_id_2#',
+					'api_key': '#envVariable.api_key_2#',
+					'Accept': 'application/json',
+					'Content-Type': 'application/json'
+				},
+				"isAsync": false
+			};
+
+			$.ajax(settings).done(function (response) {
+				response = JSON.parse(response.rs);
+				response = response[0];
+				console.log('Response new chat: ', response);
+				if (response.id) {
+					// Nếu tìm thấy hội thoại chưa đóng thì mở ra
+					idChatFocus = response.id;
+					focusConversation();
+				} else {
+					// Nếu không tìm thấy hội thoại thì mở ra hộp thoại mới
+					clearAllMessage();
+					addInputChatBox();
+					isNew = true;
+				}
+			});
+		}
+	}
+
+	function focusConversation() {
+		if ($(`.msg-item#${idChatFocus}`).length == 0) {
+			clearRightBox();
+		} else {
+			$(`.msg-item#${idChatFocus}`).click();
+		}
+	}
+
+	// Clear message
+	function clearAllMessage() {
+		$('#x-more-div').css('display', 'none');
+		$('#messageViewInner .chat-item').remove();
+	}
+
+	// Handle make call
+	function handleMakeCall() {
+		let xphone = '';
+		let inputWidth = '100px';
+		console.log("comparison ===>>>>>", $('#inputPhone input').css('width'))
+		if ($('#inputPhone input').css('width') == inputWidth) {
+			// Nếu có ô nhập số điện thoại thì dùng sđt đó để gọi
+			xphone = $('#inputPhone input').val();
+			xphone = checkFormatPhone(xphone);
+			if (xphone) {
+				//clicktocall(`${xphone}++1`);
+				top.xCall(xphone)
+				$.toast({ text: `Đang gọi SĐT: ${xphone}`, bgColor: "var(--tasks-color)", textColor: "#ffffff" });
+			}
+		} else {
+			//let xcif = getCif(_fkKH);
+
+			//if(xcif && xcif != "")
+			// {
+			//xphone = getPhoneByCif(xcif);
+
+			if (xphone && xphone != "") {
+				xphone = checkFormatPhone(xphone);
+				if (xphone) {
+					clicktocall(`${xphone}++1`);
+					$.toast({ text: `Đang gọi SĐT: ${xphone}`, bgColor: "var(--tasks-color)", textColor: "#ffffff" });
+				}
+			} else {
+				$('#inputPhone').animate({
+					width: inputWidth
+				}, 250);
+			}
+			//}else{
+			//$.toast({text:"CIF không tồn tại!",bgColor:"var(--campaigns-color)",textColor:"#ffffff"});
+			//$('#inputPhone').animate({
+			//width: inputWidth
+			// },250);
+			//}
+		}
+	}
+
+	// Check format phone
+	function checkFormatPhone(in_phone) {
+		// Bỏ ký tự khoảng trắng
+		in_phone = in_phone.trim().split(' ').join('');
+		if (!in_phone) {
+			$.toast({ text: `Thiếu số điện thoại!`, bgColor: "var(--campaigns-color)", textColor: "#ffffff" });
+			return ''
+		} else {
+			let firstCharPhone = in_phone.substring(0, 1);
+			let formatPhone = in_phone.substring(0, 3);
+			let phoneLength = in_phone.length;
+
+			// Kiểm tra ký tự đầu tiên phải là 0
+			if (firstCharPhone != '0') {
+				$.toast({ text: `Số điện thoại phải bắt đầu bằng số 0`, bgColor: "var(--campaigns-color)", textColor: "#ffffff" });
+			} else {
+				// Format số điện thoại bàn
+				if (formatPhone == '028' || formatPhone == '024') {
+					if (phoneLength < 11 || phoneLength > 11) {
+						$.toast({ text: `Độ dài số điện thoại ${formatPhone} phải là 11`, bgColor: "var(--campaigns-color)", textColor: "#ffffff" });
+					} else {
+						return in_phone
+					}
+				} else {
+					// Format số di động
+					if (phoneLength < 10 || phoneLength > 10) {
+						$.toast({ text: `Độ dài số điện thoại ${formatPhone} phải là 10`, bgColor: "var(--campaigns-color)", textColor: "#ffffff" });
+					} else {
+						return in_phone
+					}
+				}
+			}
+			return ''
+		}
+	}
+
+	// ----- Handle New Chat -----
+	function handleSuggestTemplate() {
+		if ($('#suggestBox span.btn.button').length > 0 || isSuggestTemplateLoaded) return;
+		isSuggestTemplateLoaded = true;
+		var settings = {
+			"url": "/jw/api/list/list_omni_template_social?d-6205803-fn_suggest=1",
+			"method": "GET",
+			"timeout": 0,
+			"headers": {
+				'api_id': '#envVariable.api_id_2#',
+				'api_key': '#envVariable.api_key_2#',
+				'Accept': 'application/json',
+				'Content-Type': 'application/json'
+			},
+			"isAsync": true
+		};
+
+		$.ajax(settings).done(function (response) {
+			console.log(response);
+			if (response.data && response.data.length > 0) {
+				response.data.map((e, i) => {
+					$('#suggestBox').prepend(`<span onclick="richInput.val('${e.content}');" class="btn button">${e.tieude}</span>`);
+				});
+				isSuggestTemplateLoaded = false;
+			}
+		});
+	}
+
+	function returnLiveChatPage() {
+		let layui_this = $('.layui-tab-title .layui-this', window.parent.document);
+		if (layui_this.text() == 'Social Chatဆ') {
+			layui_this.on('click', function () {
+				let IDSuVu = top.handleIDSuVu().trim();
+				console.log('Excute check: ', IDSuVu);
+				if (IDSuVu && _ticketId) {
+					checkTicketClosed(_ticketId);
+					top.handleIDSuVu(' ');
+				}
+			})
+		}
+	}
+
+	function handleTag() {
+		$('#toolTag').off('click');
+		$('#toolTag').click(function () {
+			if (_ticketId) {
+				xadmin.openPopup('', `omni_tag?embed=true&ticketId=${_ticketId}&tag=${_tagId || ''}`, 400, 300);
+			} else {
+				$.toast({ text: 'Không tìm thấy mã hội thoại!' });
+			}
+		})
+	}
+
+	function toggleSuggestBox(e) {
+		let isShow = $(e).attr('isShow');
+		if (isShow == '1') { // handle to off
+			$(e).attr('isShow', '0').attr('class', 'sap sap-arrow-down');;
+			$('#suggestBox span').not('#toggleSuggestBox').slideUp(100);
+		} else { // handle to on
+			$(e).attr('isShow', '1').attr('class', 'sap sap-arrow-up');
+			$('#suggestBox span').not('#toggleSuggestBox').slideDown(100);
+		}
+	}
+
+	function getDataTicket(type, id_social, callback) {
+		var data_json = '';
+		var settings = {
+			"url": `/jw/api/form/api_getDataTicket/GET?type=${type}&id_social=${id_social}`,
+			"method": "GET",
+			"timeout": 0,
+			"headers": {
+				'api_id': '#envVariable.api_id#',
+				'api_key': '#envVariable.api_key#',
+				'Accept': 'application/json',
+				'Content-Type': 'application/json'
+			},
+			"isAsync": true
+		};
+
+		$.ajax(settings).done(function (response) {
+			console.log(response.rs);
+			if (response.rs) {
+				data_json = JSON.parse(response.rs);
+				console.log(data_json[0].id);
+			}
+			callback(data_json);
+		});
+	}
+
+	function handleFacebookPolicy() {
+		if (_type && _type.toLowerCase().includes('facebook')) {
+			let time_mes = $(".send-time").last().text();
+			let second_mes = (new Date(time_mes)).getTime() / 1000;
+			let today = new Date();
+			let date = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+			let time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+			let dateTime = date + ' ' + time;
+			let curr_time = (new Date(dateTime)).getTime() / 1000;
+			if (curr_time - second_mes >= 86400) {
+				clearInputChatBox();
+				$('#toolNewChat').remove();
+				showMessage('Không thể gửi tin nhắn do chính sách quá 24h của Facebook. Nếu muốn gửi vui lòng vào Fanpage gửi trực tiếp.');
+			}
+		}
+	}
+
+	function handleFileName(in_name) {
+		if (!in_name) return ''
+
+		let ts = in_name;
+		ts = ts.split('.');
+		let extensionFile = ts.pop();
+		ts = ts.join('.');
+		let lastNameFile = '';
+
+		if (ts.length > 10) {
+			if (ts.length > 3) {
+				lastNameFile = ts.substring(ts.length - 3, ts.length);
+				ts = ts.substring(0, ts.length - 3);
+			}
+		}
+
+
+		let firstNameFile = ts;
+
+		return {
+			'firstName': firstNameFile,
+			'lastName': lastNameFile,
+			'extensionFile': extensionFile
+		}
+	}
+
+	function checkFileType(in_name) {
+		in_name = in_name.toLowerCase();
+
+		// Word
+		if (in_name.includes('.doc') || in_name.includes('.docm') || in_name.includes('.docx')
+			|| in_name.includes('.dot') || in_name.includes('.dotx')) {
+			return {
+				'icon': 'fa-file-word-o',
+				'type': 'word'
+			}
+		}
+
+		// Excel
+		if (in_name.includes('.xla') || in_name.includes('.xlam') || in_name.includes('.xll')
+			|| in_name.includes('.xlm') || in_name.includes('.xls') || in_name.includes('.xlsm')
+			|| in_name.includes('.xlsx') || in_name.includes('.xlt') || in_name.includes('.xltm')
+			|| in_name.includes('.xltx')) {
+			return {
+				'icon': 'fa-file-excel-o',
+				'type': 'excel'
+			}
+		}
+
+		// PowerPoint
+		if (in_name.includes('.pot') || in_name.includes('.potm') || in_name.includes('.potx')
+			|| in_name.includes('.ppam') || in_name.includes('.pps') || in_name.includes('.ppsm')
+			|| in_name.includes('.ppsx') || in_name.includes('.ppt') || in_name.includes('.pptm')
+			|| in_name.includes('.pptx')) {
+			return {
+				'icon': 'fa-file-powerpoint-o',
+				'type': 'powerpoint'
+			}
+		}
+
+		// Archive
+		if (in_name.includes('.zip') || in_name.includes('.7zip') || in_name.includes('.compress')
+			|| in_name.includes('.rar') || in_name.includes('.zip')) {
+			return {
+				'icon': 'fa-file-archive-o',
+				'type': 'archive'
+			}
+		}
+
+		// PDF
+		if (in_name.includes('.pdf')) {
+			return {
+				'icon': 'fa-file-pdf-o',
+				'type': 'pdf'
+			}
+		}
+
+		// Image
+		if (in_name.includes('.jpg') || in_name.includes('.jpeg') || in_name.includes('.gif')
+			|| in_name.includes('.png') || in_name.includes('.tiff')) {
+			return {
+				'icon': 'fa-file-image-o',
+				'type': 'image'
+			}
+		}
+
+		// Video
+		if (in_name.includes('.mp4') || in_name.includes('.mpeg') || in_name.includes('.mov')
+			|| in_name.includes('.flv')) {
+			return {
+				'icon': 'fa-file-video-o',
+				'type': 'video'
+			}
+		}
+
+		// Audio
+		if (in_name.includes('.aac') || in_name.includes('.adt') || in_name.includes('.adts')
+			|| in_name.includes('.wma') || in_name.includes('.wav') || in_name.includes('.flac')
+			|| in_name.includes('.mp3') || in_name.includes('.m4a')) {
+			return {
+				'icon': 'fa-file-audio-o',
+				'type': 'audio'
+			}
+		}
+
+		// Text
+		if (in_name.includes('.wpd') || in_name.includes('.wp5') || in_name.includes('.txt')
+			|| in_name.includes('.text')) {
+			return {
+				'icon': 'fa-file-text-o',
+				'type': 'text'
+			}
+		}
+
+		// Code
+		if (in_name.includes('.html') || in_name.includes('.css') || in_name.includes('.js')
+			|| in_name.includes('.xps') || in_name.includes('.jar') || in_name.includes('.htm')) {
+			return {
+				'icon': 'fa-file-code-o',
+				'type': 'code'
+			}
+		}
+
+		// Other
+		return {
+			'icon': 'fa-file-o',
+			'type': 'other'
+		}
+	}
+
+	// ---------- End ChatBox ----------
+</script>
