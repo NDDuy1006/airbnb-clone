@@ -8,7 +8,7 @@ const Logo = () => {
 
   return (
     <div
-      className="inline-flex items-center"
+      className="items-center hidden md:inline-flex"
     >
       <Image
         onClick={() => router.push("/")}
@@ -20,7 +20,7 @@ const Logo = () => {
       />
       <span
         style={{ fontFamily: "'Poppins', sans-serif" }}
-        className="text-2xl text-blue-500 font-extrabold hidden md:block "
+        className="text-2xl text-blue-500 font-extrabold"
       >
         Oasis
       </span>
