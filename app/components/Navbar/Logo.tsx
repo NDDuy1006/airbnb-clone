@@ -8,18 +8,22 @@ const Logo = () => {
 
   return (
     <div
-      style={{ fontFamily: "'Poppins', sans-serif" }}
-      className="inline-flex font-extrabold text-2xl text-blue-500 items-center"
+      className="inline-flex items-center"
     >
       <Image
         onClick={() => router.push("/")}
         alt="Logo"
-        className="hidden md:block cursor-pointer mr-2"
+        className="cursor-pointer mr-2"
         height="30"
         width="30"
         src="/images/logoipsum.svg"
       />
-      Oasis
+      <span
+        style={{ fontFamily: "'Poppins', sans-serif" }}
+        className="text-2xl text-blue-500 font-extrabold hidden md:block "
+      >
+        Oasis
+      </span>
     </div>
   )
 }
