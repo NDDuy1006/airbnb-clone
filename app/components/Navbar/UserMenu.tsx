@@ -44,7 +44,7 @@ const UserMenu = (props: UserMenuProps) => {
           onClick={onRent}
           className="category-button"
         >
-          Airbnb your home
+          Oasis your home
         </div>
         <div
           onClick={toggleOpen}
@@ -80,7 +80,7 @@ const UserMenu = (props: UserMenuProps) => {
                   />
                   <MenuItem
                     onClick={rentModal.onOpen}
-                    label="Airbnb my home"
+                    label="Oasis my home"
                   />
                   <hr />
                   <MenuItem

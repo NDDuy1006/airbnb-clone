@@ -19,7 +19,7 @@ const Logo = () => {
         width="30"
         src="/images/logoipsum.svg"
       />
-      TripNest
+      Oasis
     </div>
   )
 }
