@@ -28,7 +28,7 @@ const Button = (props: ButtonProps) => {
       disabled={disabled}
       className={twMerge(
         `relative disabled:opacity-40 disabled:cursor-not-allowed rounded-lg hover:opacity-70 transition w-full`,
-        outline ? "bg-white border-black text-black" : "bg-rose-500 border-rose-500 text-white",
+        outline ? "bg-white border-black text-black" : "bg-blue-500 border-blue-500 text-white",
         small ? "py-2 font-light border-[1px]" : "py-3 font-semibold border-2"
       )}
     >

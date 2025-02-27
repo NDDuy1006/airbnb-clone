@@ -7,14 +7,20 @@ const Logo = () => {
   const router = useRouter();
 
   return (
-    <Image
-      onClick={() => router.push("/")}
-      alt="Logo"
-      className="hidden md:block cursor-pointer"
-      height="100"
-      width="100"
-      src="/images/logo.png"
-    />
+    <div
+      style={{ fontFamily: "'Poppins', sans-serif" }}
+      className="inline-flex font-extrabold text-2xl text-blue-500 items-center"
+    >
+      <Image
+        onClick={() => router.push("/")}
+        alt="Logo"
+        className="hidden md:block cursor-pointer mr-2"
+        height="30"
+        width="30"
+        src="/images/logoipsum.svg"
+      />
+      TripNest
+    </div>
   )
 }
 

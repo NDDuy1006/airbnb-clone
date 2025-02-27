@@ -12,13 +12,13 @@ const MobileSignInButtons = (props: IProps) => {
   return (
     <div className="flex gap-1 md:gap-3">
       <div
-        className="mobile-signin-button bg-rose-500 text-white"
+        className="mobile-signin-button bg-blue-500 text-white"
         onClick={logInModal.onOpen}
       >
         Log in
       </div>
       <div
-        className="mobile-signin-button bg-white border-rose-500 text-neutral-500"
+        className="mobile-signin-button bg-white border-blue-500 text-neutral-500"
         onClick={registerModal.onOpen}
       >
         Sign up

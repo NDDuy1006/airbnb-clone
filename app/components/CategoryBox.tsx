@@ -60,6 +60,3 @@ const CategoryBox = (props: CategoryBoxProps) => {
 }
 
 export default CategoryBox;
-
-// ${selected ? "border-b-neutral-800" : "border-transparent"}
-//         ${selected ? "text-neutral-800" : "text-neutral-500"}
