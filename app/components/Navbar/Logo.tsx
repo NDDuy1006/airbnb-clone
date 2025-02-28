@@ -8,12 +8,12 @@ const Logo = () => {
 
   return (
     <div
-      className="items-center hidden md:inline-flex"
+      className="items-center hidden md:inline-flex cursor-pointer"
     >
       <Image
         onClick={() => router.push("/")}
         alt="Logo"
-        className="cursor-pointer mr-2"
+        className="mr-2"
         height="30"
         width="30"
         src="/images/logoipsum.svg"
